@@ -8,3 +8,4 @@ spec:
       storage: 512Mi
   accessModes:
     - ReadWriteOnce
+  storageClassName: local-storage  
