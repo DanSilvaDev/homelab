@@ -66,8 +66,8 @@ spec:
         - name: bgp_peerpass
         - name: bgp_peeras
           value: "65000"
-        - name: bgp_peers
-          value: 192.168.3.110:65000::false,192.168.3.111:65000::false
+#        - name: bgp_peers
+#          value: 192.168.3.110:65000::false,192.168.3.111:65000::false
         - name: address
           value: 192.168.3.101
         - name: prometheus_server

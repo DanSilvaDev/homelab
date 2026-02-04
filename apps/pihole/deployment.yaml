@@ -1,6 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  labels:
+    app: pihole
   name: pihole-deployment
 spec:
   selector:
@@ -35,11 +37,11 @@ spec:
               protocol: TCP
             - name: dns-udp
               containerPort: 53
-              hostPort: 93
+#              hostPort: 53
               protocol: UDP
             - name: dns-tcp
               containerPort: 53
-              hostPort: 93
+#              hostPort: 53
               protocol: TCP
           volumeMounts:
             - name: pihole-pv
