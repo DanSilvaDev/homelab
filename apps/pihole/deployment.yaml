@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  labels:
-    app: pihole
   name: pihole-deployment
+  namespace: pihole
 spec:
+  replicas: 1
   selector:
     matchLabels:
-      app: pihole
+      app: pihole-app
   template:
     metadata:
       labels:
-        app: pihole
+        app: pihole-app
     spec:
       volumes:
         - name: pihole-pv
@@ -36,11 +36,11 @@ spec:
               containerPort: 443
               protocol: TCP
             - name: dns-udp
-              containerPort: 53
+              containerPort: 93
 #              hostPort: 53
               protocol: UDP
             - name: dns-tcp
-              containerPort: 53
+              containerPort: 93
 #              hostPort: 53
               protocol: TCP
           volumeMounts:
@@ -48,14 +48,14 @@ spec:
               mountPath: "/etc/pihole"
           resources:
             limits:
-              memory: "2G"
-              cpu: "1"
+              memory: 2G
+              cpu: 1
             requests:
-              memory: "1G"
-              cpu: "1"  
+              memory: 1G
+              cpu: 100m  
       dnsConfig:
         nameservers:
           - 1.1.1.1
           - 8.8.8.8
-      #hostNetwork: true
+      hostNetwork: true
       #dnsPolicy: ClusterFirstWithHostNet
