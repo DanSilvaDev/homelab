@@ -23,8 +23,6 @@ spec:
           envFrom:
             - configMapRef:
                 name: pihole-configs
-            #- secretRef:
-            #   name: pihole-secrets
           securityContext:
             capabilities:
               add: ["SYS_NICE"]
@@ -55,5 +53,3 @@ spec:
         nameservers:
           - 1.1.1.1
           - 1.1.1.2
-      #hostNetwork: true
-      #dnsPolicy: ClusterFirstWithHostNet
