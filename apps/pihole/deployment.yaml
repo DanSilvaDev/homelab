@@ -2,14 +2,16 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pihole-deployment
+  namespace: default
 spec:
+  replicas: 1
   selector:
     matchLabels:
-      app: pihole
+      app: pihole-app
   template:
     metadata:
       labels:
-        app: pihole
+        app: pihole-app
     spec:
       volumes:
         - name: pihole-pv
@@ -17,12 +19,10 @@ spec:
             claimName: pihole-pvc
       containers:
         - name: pihole
-          image: pihole/pihole:2025.11.1
+          image: pihole/pihole:2026.10.0
           envFrom:
             - configMapRef:
                 name: pihole-configs
-            #- secretRef:
-            #   name: pihole-secrets
           securityContext:
             capabilities:
               add: ["SYS_NICE"]
@@ -34,26 +34,22 @@ spec:
               containerPort: 443
               protocol: TCP
             - name: dns-udp
-              containerPort: 53
-              hostPort: 93
+              containerPort: 93
               protocol: UDP
             - name: dns-tcp
-              containerPort: 53
-              hostPort: 93
+              containerPort: 93
               protocol: TCP
           volumeMounts:
             - name: pihole-pv
               mountPath: "/etc/pihole"
           resources:
             limits:
-              memory: "2G"
-              cpu: "1"
+              memory: 2G
+              cpu: 1
             requests:
-              memory: "1G"
-              cpu: "1"  
+              memory: 1G
+              cpu: 100m  
       dnsConfig:
         nameservers:
           - 1.1.1.1
-          - 8.8.8.8
-      #hostNetwork: true
-      #dnsPolicy: ClusterFirstWithHostNet
+          - 1.1.1.2
