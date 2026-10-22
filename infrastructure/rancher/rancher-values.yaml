@@ -1,0 +1,4 @@
+bootstrapPassword: clusterChart
+ingress:
+  tls:
+    source: letsEncrypt
