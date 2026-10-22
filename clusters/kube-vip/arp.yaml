@@ -21,9 +21,6 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              - key: node-role.kubernetes.io/master
-                operator: Exists
-            - matchExpressions:
               - key: node-role.kubernetes.io/control-plane
                 operator: Exists
       containers:
@@ -59,11 +56,13 @@ spec:
         - name: vip_leasename
           value: plndr-cp-lock
         - name: vip_leaseduration
-          value: "5"
+          value: "15"
         - name: vip_renewdeadline
-          value: "3"
+          value: "10"
         - name: vip_retryperiod
-          value: "1"
+          value: "2"
+        - name: vip_cidrconfigmap
+          value: "kubevip"  
         - name: address
           value: 192.168.3.101
         - name: prometheus_server
