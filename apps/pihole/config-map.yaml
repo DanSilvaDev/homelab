@@ -2,7 +2,6 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: pihole-configs
-  namespace: pihole
 data:
   TZ: 'America/Sao_Paulo'
   FTLCONF_dns_listeningMode: 'ALL'
@@ -16,5 +15,5 @@ data:
   #FTLCONF_dns_reply_host_IPv4: '192.168.3.200'
   FTLCONF_dhcp_active: "false"
   FTLCONF_dhcp_router: '192.168.3.1'
-  FTLCONF_dns_reply_host_IPv4: '192.168.3.200'
+  #FTLCONF_dns_reply_host_IPv4: '192.168.3.200'
   FTLCONF_dns_port: '93' 

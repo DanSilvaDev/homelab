@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pihole-deployment
-  namespace: pihole
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -19,7 +19,7 @@ spec:
             claimName: pihole-pvc
       containers:
         - name: pihole
-          image: pihole/pihole:2025.11.1
+          image: pihole/pihole:2026.10.0
           envFrom:
             - configMapRef:
                 name: pihole-configs
@@ -37,11 +37,9 @@ spec:
               protocol: TCP
             - name: dns-udp
               containerPort: 93
-#              hostPort: 53
               protocol: UDP
             - name: dns-tcp
               containerPort: 93
-#              hostPort: 53
               protocol: TCP
           volumeMounts:
             - name: pihole-pv
@@ -56,6 +54,6 @@ spec:
       dnsConfig:
         nameservers:
           - 1.1.1.1
-          - 8.8.8.8
-      hostNetwork: true
+          - 1.1.1.2
+      #hostNetwork: true
       #dnsPolicy: ClusterFirstWithHostNet
