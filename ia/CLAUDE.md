@@ -48,3 +48,4 @@ Contém skills reutilizáveis específicas deste projeto. Para que uma skill sej
 
 **Skills atualmente espelhadas em `.claude/skills/`** (mantenha as duas cópias em sincronia ao editar):
 - `create-troubleshooting-doc` → espelhada em `.claude/skills/create-troubleshooting-doc/SKILL.md`
+- `create-pull-request` → espelhada em `.claude/skills/create-pull-request/SKILL.md` (usa o template `.github/PULL_REQUEST_TEMPLATE.md`)

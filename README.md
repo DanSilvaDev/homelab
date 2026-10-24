@@ -41,6 +41,10 @@ ia/                        Contexto e ferramentas para agentes de IA trabalharem
   CLAUDE.md                  Contexto geral do projeto (topologia, convenções, onde olhar primeiro)
   skills/                    Skills reutilizáveis específicas deste projeto
     create-troubleshooting-doc/   Gera documentos de troubleshooting no padrão do repositório
+    create-pull-request/          Abre PRs no GitHub com descrição bilíngue (PT-BR/EN)
+
+.github/
+  PULL_REQUEST_TEMPLATE.md  Template padrão de PR (descrição bilíngue, objetiva)
 
 .claude/skills/            Cópia das skills de ia/skills/ que o Claude Code carrega automaticamente
 ```
@@ -94,6 +98,10 @@ ia/                        Context and tooling for AI agents working in this rep
   CLAUDE.md                  General project context (topology, conventions, where to look first)
   skills/                    Project-specific reusable skills
     create-troubleshooting-doc/   Generates troubleshooting docs following the repository's pattern
+    create-pull-request/          Opens GitHub PRs with a bilingual (PT-BR/EN) description
+
+.github/
+  PULL_REQUEST_TEMPLATE.md  Default PR template (bilingual, objective description)
 
 .claude/skills/            Mirror of ia/skills/ that Claude Code loads automatically
 ```
