@@ -1,0 +1,90 @@
+# kube-prometheus-stack (prometheus-community/kube-prometheus-stack)
+# Cluster: k3s via Rancher
+#   - kubecluster-lenovo-z40-70 (control-plane): 4 vCPU / 15GiB RAM, ~896GB disco
+#   - worker1: 4 vCPU / 15GiB RAM, ~93GB disco
+#   - worker2: 5 vCPU / 12GiB RAM, GPU (GTX 970), ~18GB disco (label gpu=true)
+#
+# k3s embute controller-manager/scheduler/etcd no próprio binário, expostos só em
+# 127.0.0.1 por padrão. Os ServiceMonitors padrão do chart não conseguem alcançá-los
+# e ficariam permanentemente "down" -> desabilitados aqui para não gerar alertas falsos.
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+kubeStateMetrics:
+  enabled: true
+
+# DaemonSet - roda em TODOS os nodes, incluindo o worker2 (queremos métricas de host dele também)
+nodeExporter:
+  enabled: true
+
+prometheus:
+  service:
+    type: LoadBalancer
+    # IP fixo alocado pelo kube-vip-cloud-provider (range 192.168.3.200-254)
+    loadBalancerIP: 192.168.3.203
+    port: 80
+    targetPort: 9090
+  prometheusSpec:
+    retention: 15d
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 2Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: truenas-nfs-ssd
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+
+alertmanager:
+  service:
+    type: LoadBalancer
+    # IP fixo alocado pelo kube-vip-cloud-provider (range 192.168.3.200-254)
+    loadBalancerIP: 192.168.3.204
+    port: 80
+    targetPort: 9093
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: truenas-nfs-ssd
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+
+grafana:
+  service:
+    type: LoadBalancer
+    # IP fixo alocado pelo kube-vip-cloud-provider (range 192.168.3.200-254)
+    loadBalancerIP: 192.168.3.201
+  persistence:
+    enabled: true
+    storageClassName: truenas-nfs-ssd
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi

@@ -32,7 +32,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 | `fast-data` | dataset | recordsize 128K | LZ4 | Storage rápido genérico (NFS), inclui pasta `os_images` com ISOs |
 | `databases` | dataset | recordsize 16K | LZ4 | Reservado para Postgres/Redis (recordsize ajustado ao page size) |
 
-**Pool `storage-principal`** (Stripe, HD WD Blue 1TB — upgrade futuro para IronWolf 4TB em Mirror)
+**Pool `data`** (Stripe, HD WD Blue 1TB — upgrade futuro para IronWolf 4TB em Mirror)
 
 | Nome | Compressão | Observação |
 |---|---|---|
@@ -74,8 +74,9 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 
 ### Rede
 - Adapter Type: VirtIO
-- NIC Attach: `enp6s0` (bridge automático via TrueNAS)
-- Observação: recomendado configurar reserva de IP (DHCP reservation) no roteador para manter IP fixo
+- NIC Attach: bridge `br1` (não mais `enp6s0` diretamente — ver observação abaixo)
+- IP: `192.168.3.105/24` (DHCP + reserva por MAC no roteador)
+- Observação: inicialmente a NIC estava anexada direto a `enp6s0` (modo macvtap), o que impedia a VM de alcançar o próprio host TrueNAS (qualquer protocolo, não só NFS). Corrigido criando a bridge `br1` no TrueNAS e reanexando a NIC da VM a ela. O endereço MAC da interface virtual mudou nessa reconfiguração — a reserva de DHCP no roteador foi atualizada para o novo MAC. Detalhes: [troubleshooting/worker2_vm_truenas_host_unreachable_macvtap.md](../../troubleshooting/worker2_vm_truenas_host_unreachable_macvtap.md)
 
 ### Display
 - Tipo: VNC
