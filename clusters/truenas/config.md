@@ -63,6 +63,9 @@ Finalidade: armazenamento geral, mídias (Jellyfin/Plex) e backups
 | `Backups` | ZSTD | Split futuro planejado em sub-datasets por fonte (ex. `smb-pc`, `nfs-k3s`) para retenção/quota independentes |
 | `k8s` | LZ4 | Export NFS (quota 100GiB) para PVs dinâmicos do cluster k3s via `nfs-subdir-external-provisioner` (StorageClass `truenas-nfs-hdd`), para dados que não exigem I/O de SSD. Hosts autorizados: `192.168.3.101`, `192.168.3.102`, `192.168.3.105` |
 
+## Monitoramento
+- `node_exporter` (`prom/node-exporter:v1.8.2`) rodando via Docker direto no host (porta 9100), fora do catálogo de Apps da UI (restrição de host path mounts na Community Edition 25.10.7). Coletado pelo Prometheus do cluster k3s como alvo externo. Detalhes: [clusters/observability/config.md](../observability/config.md)
+
 ## Virtualização
 
 | VM | Detalhes |
