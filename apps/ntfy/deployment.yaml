@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ntfy-deployment
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ntfy
+  template:
+    metadata:
+      labels:
+        app: ntfy
+    spec:
+      volumes:
+        - name: ntfy-pv
+          persistentVolumeClaim:
+            claimName: ntfy-pvc
+      containers:
+        - name: ntfy
+          image: binwiederhier/ntfy:v2.34.0
+          args: ["serve"]
+          env:
+            # Usado só para montar links/URLs nas notificações - não precisa ser público
+            - name: NTFY_BASE_URL
+              value: "http://ntfy.home"
+            - name: NTFY_CACHE_FILE
+              value: "/var/lib/ntfy/cache.db"
+            - name: NTFY_CACHE_DURATION
+              value: "12h"
+            - name: NTFY_BEHIND_PROXY
+              value: "false"
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          volumeMounts:
+            - name: ntfy-pv
+              mountPath: /var/lib/ntfy
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi

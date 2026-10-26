@@ -23,6 +23,7 @@ Guarda os manifestos, configurações de infraestrutura e a documentação de es
 ```
 apps/                      Manifestos de aplicações rodando no cluster
   pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, API gateway
+  ntfy/                      ntfy self-hosted (push notifications) - deployment, service, PVC
   gpu-test/                  Pod de teste usado para validar alocação de GPU (benchmark CUDA)
 
 clusters/                  Configuração e estado dos nós do cluster
@@ -83,6 +84,7 @@ It holds the manifests, infrastructure configuration, and state/diagnostic docum
 ```
 apps/                      Application manifests running on the cluster
   pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, API gateway
+  ntfy/                      Self-hosted ntfy (push notifications) - deployment, service, PVC
   gpu-test/                  Test pod used to validate GPU allocation (CUDA benchmark)
 
 clusters/                  Configuration and state of the cluster nodes

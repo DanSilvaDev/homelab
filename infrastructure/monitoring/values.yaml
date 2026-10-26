@@ -71,6 +71,51 @@ alertmanager:
           resources:
             requests:
               storage: 2Gi
+    # Secrets criados manualmente via `kubectl create secret` (não commitados).
+    # O Prometheus Operator monta cada um em /etc/alertmanager/secrets/<nome-do-secret>/<key>.
+    secrets:
+      - alertmanager-telegram-api-key
+      - alertmanager-telegram-chat-id
+
+  # Roteamento de alertas: Telegram (bot próprio) + ntfy self-hosted (push no celular).
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      receiver: notifications
+      group_by: ["alertname"]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+    receivers:
+      - name: notifications
+        telegram_configs:
+          - bot_token_file: /etc/alertmanager/secrets/alertmanager-telegram-api-key/token
+            chat_id_file: /etc/alertmanager/secrets/alertmanager-telegram-chat-id/token
+            parse_mode: "HTML"
+            # Template Go (mesmo mecanismo de templating usado em todo o Alertmanager).
+            # .CommonLabels/.CommonAnnotations cobrem o que é igual entre os alertas do
+            # grupo; o range por .Alerts cobre o que varia por alerta individual (ex: instance).
+            message: |-
+              {{ if eq .Status "firing" }}🔥 <b>ALERTA</b>{{ else }}✅ <b>RESOLVIDO</b>{{ end }}: {{ .CommonLabels.alertname }}
+              Severidade: <b>{{ .CommonLabels.severity }}</b>
+              {{ range .Alerts }}
+              • Instância: {{ .Labels.instance }}{{ if .Annotations.summary }}
+                {{ .Annotations.summary }}{{ end }}
+              {{ end }}
+        # ntfy self-hosted (apps/ntfy/), alcançado via DNS interno do cluster - o Alertmanager
+        # roda dentro do cluster, não precisa sair pela LAN/kube-vip/Pi-hole pra chegar nele.
+        # Formato da mensagem: o webhook_configs sempre manda o JSON fixo do Alertmanager como
+        # corpo da requisição (sem template customizável de forma simples/suportada nesta
+        # versão) - o ntfy trata esse corpo cru como texto da notificação (funcional, não bonito).
+        webhook_configs:
+          - url: http://ntfy.monitoring.svc.cluster.local/homelab-alerts
+            send_resolved: true
+      # O Helm substitui a lista "receivers" inteira (não faz merge item a item), mas
+      # mantém a sub-rota padrão do chart que direciona o alerta sintético "Watchdog"
+      # (dead man's switch, deve ficar silencioso) pro receiver "null" - sem redefinir
+      # esse receiver aqui, a rota fica órfã e o Alertmanager rejeita a config inteira.
+      - name: "null"
 
 grafana:
   service:

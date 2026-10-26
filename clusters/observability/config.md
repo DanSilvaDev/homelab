@@ -4,7 +4,7 @@ Propósito: stack de métricas, dashboards e alertas para o cluster k3s, mais o 
 
 Ver também: [TrueNAS - config.md](../truenas/config.md) | [Worker2 - config.md](../worker2/config.md)
 
-Status: Prometheus + Grafana + Alertmanager instalados e validados (métricas dos 3 nodes confirmadas). Pendente: roteamento de alertas (Discord/Telegram) e stack de logs (Loki + Alloy).
+Status: Prometheus + Grafana + Alertmanager instalados e validados (métricas dos 3 nodes confirmadas). Roteamento de alertas (Telegram + ntfy) configurado e validado. Pendente: stack de logs (Loki + Alloy).
 
 ## Storage dinâmico (pré-requisito)
 
@@ -49,8 +49,9 @@ O cluster usa `kube-vip-cloud-provider` com range de IPs `192.168.3.200-254` par
 | Rancher | `192.168.3.202` | — | `rancher.home` |
 | Prometheus | `192.168.3.203` | 80 (targetPort 9090) | `prometheus.home` |
 | Alertmanager | `192.168.3.204` | 80 (targetPort 9093) | `alert.home` |
+| ntfy | `192.168.3.205` | 80 | `ntfy.home` |
 
-> **Atenção de segurança**: Prometheus e Alertmanager **não têm autenticação própria** (diferente do Grafana, que tem login). Aceitável dentro da LAN confiável de casa, mas nunca expor publicamente (ex: Cloudflare Tunnel) sem autenticação na frente.
+> **Atenção de segurança**: Prometheus, Alertmanager e ntfy **não têm autenticação própria**. Aceitável dentro da LAN confiável de casa, mas nunca expor publicamente (ex: Cloudflare Tunnel) sem autenticação na frente.
 
 DNS local configurado no Pi-hole (Settings → Local DNS Records), resolvendo apenas para dispositivos que usam o Pi-hole como DNS (padrão da LAN).
 
@@ -88,14 +89,38 @@ O TrueNAS não é um node do k3s, então não é coberto automaticamente pelo `n
 - **`jobLabel`**: o Service e o ServiceMonitor usam `jobLabel: node-exporter` (label) + `spec.jobLabel: jobLabel` (apontando para esse label), igual ao padrão do ServiceMonitor do node-exporter do cluster. Sem isso, o Prometheus Operator usaria o nome do Service (`truenas-node-exporter`) como label `job`, e o alvo ficaria fora do dashboard "Node Exporter / Nodes" do Grafana (filtrado por `job="node-exporter"`).
 - **Validação**: target `serviceMonitor/monitoring/truenas-node-exporter/0` confirmado `UP` no Prometheus; com o `jobLabel` ajustado, o host aparece no seletor de node do dashboard "Node Exporter / Nodes" junto dos 3 nodes do cluster.
 
+## Alertmanager - Roteamento de alertas
+
+Um único receiver (`notifications`) com dois canais, mais um receiver `"null"` (silencioso) reservado pro alerta sintético `Watchdog` do chart (dead man's switch, não deve notificar ninguém). Configurado em `alertmanager.config` dentro de `infrastructure/monitoring/values.yaml`.
+
+### Telegram (`telegram_configs`)
+- Bot próprio criado via BotFather. Token e `chat_id` guardados como Secrets separados (criados manualmente via `kubectl create secret`, **não commitados**): `alertmanager-telegram-api-key` e `alertmanager-telegram-chat-id` (namespace `monitoring`), ambos com a key `token`.
+- Montados no pod via `alertmanagerSpec.secrets` (lista de nomes de Secret) — o Prometheus Operator monta cada um em `/etc/alertmanager/secrets/<nome-do-secret>/<key>`. Referenciados na config via `bot_token_file`/`chat_id_file` (lidos a cada notificação, não só na inicialização — atualizar o Secret não exige reiniciar o pod nem reaplicar o Helm).
+- `parse_mode: HTML` + campo `message` customizado (template Go) pra formatar a notificação (status, severidade, instância, resumo por alerta).
+- Token original exposto acidentalmente durante um diagnóstico e rotacionado por segurança — ver [troubleshooting/kubectl_jsonpath_error_secret_exposure.md](../../troubleshooting/kubectl_jsonpath_error_secret_exposure.md).
+
+### ntfy self-hosted (`webhook_configs`)
+- App de push notification, deployado no próprio cluster via manifestos simples (`apps/ntfy/`: `deployment.yaml`, `service.yaml`, `pvc.yaml`), namespace `monitoring`, imagem `binwiederhier/ntfy:v2.34.0`.
+- Storage: PVC 1Gi via `truenas-nfs-ssd` (cache de mensagens, retenção `NTFY_CACHE_DURATION=12h`).
+- Exposto só na LAN por enquanto (mesmo padrão dos outros serviços: LoadBalancer kube-vip + DNS local no Pi-hole) — push só chega com o celular na rede de casa. Migração pra Tailscale (acesso de qualquer lugar) é possível depois sem mudar o deployment do ntfy em si.
+- App ntfy no celular configurado com "Default server" apontando pro servidor próprio (`http://ntfy.home`), inscrito no tópico `homelab-alerts`.
+- O Alertmanager alcança o ntfy via DNS interno do cluster (`http://ntfy.monitoring.svc.cluster.local/homelab-alerts`), não pelo IP do LoadBalancer — não depende do Pi-hole nem da LAN pra esse tráfego interno.
+- **Limitação conhecida**: `webhook_configs` sempre manda o payload JSON fixo do Alertmanager como corpo da requisição (sem um template simples/suportado nesta versão, diferente do `telegram_configs`). O ntfy trata esse corpo cru como texto da notificação — funcional, mas não formatado. Possível melhoria futura: um pequeno serviço "tradutor" no meio do caminho.
+
+### Gotcha de configuração (Helm + Prometheus Operator)
+Ao sobrescrever `alertmanager.config.receivers`, é preciso reincluir manualmente o receiver `"null"` que o chart usa por padrão pro alerta `Watchdog` — o Helm substitui listas inteiras (não faz merge item a item), então uma lista `receivers` customizada apaga o `"null"` default, e a sub-rota (não sobrescrita) fica órfã, rejeitando a config inteira. Ver [troubleshooting/alertmanager_helm_receiver_list_replace.md](../../troubleshooting/alertmanager_helm_receiver_list_replace.md).
+
+### Validação realizada
+Alerta de teste disparado via `POST /api/v2/alerts` do Alertmanager chegou tanto no Telegram quanto no ntfy (push no celular).
+
 ## Próximos passos
 - [x] Storage dinâmico via NFS (TrueNAS) — SSD e HDD
 - [x] Instalar kube-prometheus-stack (Prometheus + Grafana + Alertmanager)
 - [x] Validar métricas dos 3 nodes no Grafana
 - [x] Expor Grafana/Prometheus/Alertmanager via LoadBalancer (kube-vip) + DNS local (Pi-hole)
 - [x] Coletar métricas do host TrueNAS (fora do cluster) via node_exporter + ServiceMonitor manual
-- [ ] Configurar Alertmanager → Discord (receiver `slack_configs` via webhook `/slack`)
-- [ ] Configurar Alertmanager → Telegram (receiver nativo `telegram_configs`)
+- [x] Configurar Alertmanager → Telegram (receiver nativo `telegram_configs`)
+- [x] Configurar Alertmanager → ntfy self-hosted (push no celular, `webhook_configs`)
 - [ ] Instalar Loki + Grafana Alloy (logs), usando `truenas-nfs-hdd` como storage
 - [ ] (Opcional) `dcgm-exporter` da NVIDIA para métricas de GPU do worker2
 
@@ -166,4 +191,24 @@ helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheu
   --namespace monitoring \
   -f infrastructure/monitoring/values.yaml \
   --version 92.13.1
+
+# Alertmanager -> Telegram: Secrets criados manualmente (nao commitados)
+kubectl create secret generic alertmanager-telegram-api-key \
+  --namespace monitoring --from-literal=token='<token do bot via BotFather>'
+kubectl create secret generic alertmanager-telegram-chat-id \
+  --namespace monitoring --from-literal=token='<chat_id>'
+
+# ntfy self-hosted (apps/ntfy/)
+kubectl apply -f apps/ntfy/pvc.yaml -f apps/ntfy/deployment.yaml -f apps/ntfy/service.yaml
+
+# Alertmanager -> Telegram + ntfy: alertmanager.config em infrastructure/monitoring/values.yaml
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  -f infrastructure/monitoring/values.yaml \
+  --version 92.13.1
+
+# Validacao: dispara alerta de teste direto na API do Alertmanager
+curl -i -H "Content-Type: application/json" \
+  -d '[{"labels":{"alertname":"TesteHomelab","severity":"info"}}]' \
+  http://192.168.3.204/api/v2/alerts
 ```
