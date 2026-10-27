@@ -2,7 +2,7 @@
 # Cluster: k3s via Rancher
 #   - kubecluster-lenovo-z40-70 (control-plane): 4 vCPU / 15GiB RAM, ~896GB disco
 #   - worker1: 4 vCPU / 15GiB RAM, ~93GB disco
-#   - worker2: 5 vCPU / 12GiB RAM, GPU (GTX 970), ~18GB disco (label gpu=true)
+#   - worker2: 5 vCPU / 10GiB RAM, GPU (GTX 970), ~18GB disco (label gpu=true)
 #
 # k3s embute controller-manager/scheduler/etcd no próprio binário, expostos só em
 # 127.0.0.1 por padrão. Os ServiceMonitors padrão do chart não conseguem alcançá-los

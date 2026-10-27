@@ -36,7 +36,7 @@ Dois provisioners NFS dedicados, apontando para datasets do TrueNAS (ver [truena
   - Prometheus: 20Gi
   - Alertmanager: 2Gi
   - Grafana: 5Gi
-- **Resources** (requests/limits) dimensionados para o hardware do cluster (control-plane e worker1: 4 vCPU/15GiB cada; worker2: 5 vCPU/12GiB, GPU) — ver `infrastructure/monitoring/values.yaml` para os valores exatos.
+- **Resources** (requests/limits) dimensionados para o hardware do cluster (control-plane e worker1: 4 vCPU/15GiB cada; worker2: 5 vCPU/10GiB, GPU — reduzido de 12GiB em 2026-10-26 após alertas de memory pressure no host TrueNAS, ver `clusters/worker2/config.md`) — ver `infrastructure/monitoring/values.yaml` para os valores exatos.
 - **Grafana**: limite de memória ajustado de `256Mi` para `512Mi` (request de `128Mi` para `192Mi`) após o pod entrar em `CrashLoopBackOff` por `OOMKilled` em uso normal — ver [troubleshooting/grafana_oomkilled_memory_limit.md](../../troubleshooting/grafana_oomkilled_memory_limit.md).
 
 ### Acesso (LoadBalancer via kube-vip)

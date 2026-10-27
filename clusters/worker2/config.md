@@ -10,7 +10,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 ### Hardware
 - **CPU**: AMD FX-8350 (8 Cores, 8 Threads)
 - **Placa-mãe**: ASRock 990FX Extreme3
-- **Memória RAM**: 24GB DDR3 Non-ECC
+- **Memória RAM**: 19GB DDR3 Non-ECC (valor corrigido em 2026-10-26; documentação anterior tinha 24GB por engano)
 - **GPU boot do host**: NVIDIA GeForce GT 210 (apenas para boot/console do TrueNAS)
 - **GPU passthrough**: NVIDIA GeForce GTX 970 (isolada via PCI passthrough, dedicada à VM worker2)
 
@@ -64,7 +64,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 - CPU Mode: Host Model
 
 ### Memória
-- 12 GiB
+- 10 GiB (reduzido de 12 GiB em 2026-10-26, após alertas de memory pressure no host TrueNAS — a RAM total do host é 19GB, não 24GB como documentado antes; 12 GiB alocados ao worker2 deixava pouca folga pro próprio TrueNAS + outros serviços. VM rebootada para aplicar.)
 
 ### Disco
 - Tipo: Existing zvol

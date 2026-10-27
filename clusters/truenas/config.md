@@ -7,7 +7,7 @@ Ver também: [Worker2 - config.md](../worker2/config.md)
 ## Hardware
 - **CPU**: AMD FX-8350 (8 Cores, 8 Threads)
 - **Placa-mãe**: ASRock 990FX Extreme3
-- **Memória RAM**: 24GB DDR3 Non-ECC
+- **Memória RAM**: 19GB DDR3 Non-ECC (valor corrigido em 2026-10-26; documentação anterior tinha 24GB por engano)
 - **GPU boot do host**: NVIDIA GeForce GT 210 (slots inferiores, apenas boot/console do TrueNAS)
 - **GPU passthrough VM**: NVIDIA GeForce GTX 970 (slot primário PCIE2, isolada e dedicada à VM worker2)
 
