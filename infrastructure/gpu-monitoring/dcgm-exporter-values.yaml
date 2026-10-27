@@ -1,0 +1,35 @@
+# dcgm-exporter (gpu-helm-charts/dcgm-exporter) - métricas de GPU via NVIDIA DCGM.
+# Única GPU do cluster: GTX 970 (Maxwell, compute capability 5.2) no worker2.
+#
+# Sem a mesma nodeAffinity oculta do nvdp/nvidia-device-plugin (ver
+# troubleshooting/nvidia_device_plugin_nodeaffinity_requirement.md) - confirmado lendo
+# o template do chart diretamente (daemonset.yaml), não só os values. nodeSelector
+# sozinho já basta pra restringir o DaemonSet ao worker2.
+nodeSelector:
+  gpu: "true"
+
+# Defaults do chart (cpu/memory) já são adequados pro homelab - só adicionamos o
+# request explícito de nvidia.com/gpu, replicando o padrão já validado no pod de
+# teste CUDA (gpu-test). Sem isso o chart conta só com o runtime default do
+# containerd pra enxergar a GPU, sem reservar o recurso via device plugin.
+resources:
+  limits:
+    nvidia.com/gpu: "1"
+    cpu: 200m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+serviceMonitor:
+  enabled: true
+  # Sem essa label, o Prometheus Operator ignora o ServiceMonitor (mesmo motivo já
+  # documentado em infrastructure/monitoring/truenas-external-target.yaml) - o chart
+  # roda fora do Helm release do kube-prometheus-stack.
+  additionalLabels:
+    release: kube-prometheus-stack
+
+# Observação: GPU Maxwell (GTX 970) não suporta o módulo de profiling do DCGM
+# (DCGM_FI_PROF_*, requer Volta+) - métricas básicas (utilização, memória, temperatura,
+# potência, clocks, ECC) funcionam normalmente; os painéis "profiling" do dashboard
+# oficial (12239) ficam sem dado, não é um erro de configuração.

@@ -10,7 +10,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 ### Hardware
 - **CPU**: AMD FX-8350 (8 Cores, 8 Threads)
 - **Placa-mãe**: ASRock 990FX Extreme3
-- **Memória RAM**: 24GB DDR3 Non-ECC
+- **Memória RAM**: 19GB DDR3 Non-ECC (valor corrigido em 2026-10-26; documentação anterior tinha 24GB por engano)
 - **GPU boot do host**: NVIDIA GeForce GT 210 (apenas para boot/console do TrueNAS)
 - **GPU passthrough**: NVIDIA GeForce GTX 970 (isolada via PCI passthrough, dedicada à VM worker2)
 
@@ -32,7 +32,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 | `fast-data` | dataset | recordsize 128K | LZ4 | Storage rápido genérico (NFS), inclui pasta `os_images` com ISOs |
 | `databases` | dataset | recordsize 16K | LZ4 | Reservado para Postgres/Redis (recordsize ajustado ao page size) |
 
-**Pool `storage-principal`** (Stripe, HD WD Blue 1TB — upgrade futuro para IronWolf 4TB em Mirror)
+**Pool `data`** (Stripe, HD WD Blue 1TB — upgrade futuro para IronWolf 4TB em Mirror)
 
 | Nome | Compressão | Observação |
 |---|---|---|
@@ -64,7 +64,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 - CPU Mode: Host Model
 
 ### Memória
-- 12 GiB
+- 10 GiB (reduzido de 12 GiB em 2026-10-26, após alertas de memory pressure no host TrueNAS — a RAM total do host é 19GB, não 24GB como documentado antes; 12 GiB alocados ao worker2 deixava pouca folga pro próprio TrueNAS + outros serviços. VM rebootada para aplicar.)
 
 ### Disco
 - Tipo: Existing zvol
@@ -74,8 +74,9 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 
 ### Rede
 - Adapter Type: VirtIO
-- NIC Attach: `enp6s0` (bridge automático via TrueNAS)
-- Observação: recomendado configurar reserva de IP (DHCP reservation) no roteador para manter IP fixo
+- NIC Attach: bridge `br1` (não mais `enp6s0` diretamente — ver observação abaixo)
+- IP: `192.168.3.105/24` (DHCP + reserva por MAC no roteador)
+- Observação: inicialmente a NIC estava anexada direto a `enp6s0` (modo macvtap), o que impedia a VM de alcançar o próprio host TrueNAS (qualquer protocolo, não só NFS). Corrigido criando a bridge `br1` no TrueNAS e reanexando a NIC da VM a ela. O endereço MAC da interface virtual mudou nessa reconfiguração — a reserva de DHCP no roteador foi atualizada para o novo MAC. Detalhes: [troubleshooting/worker2_vm_truenas_host_unreachable_macvtap.md](../../troubleshooting/worker2_vm_truenas_host_unreachable_macvtap.md)
 
 ### Display
 - Tipo: VNC

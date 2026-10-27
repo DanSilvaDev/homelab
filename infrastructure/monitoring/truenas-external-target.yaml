@@ -1,0 +1,60 @@
+# Expõe o node_exporter do TrueNAS (rodando via Docker direto no host, fora do cluster)
+# como alvo de scrape do Prometheus. Service sem selector + Endpoints manual é o padrão
+# do Kubernetes para apontar para um recurso externo ao cluster.
+apiVersion: v1
+kind: Service
+metadata:
+  name: truenas-node-exporter
+  namespace: monitoring
+  labels:
+    app: truenas-node-exporter
+    # Mesmo padrão do node-exporter do cluster (chart kube-prometheus-stack):
+    # o ServiceMonitor usa esse label como fonte do valor do label "job",
+    # para cair na mesma série "job=node-exporter" usada pelo dashboard "Node Exporter / Nodes".
+    jobLabel: node-exporter
+spec:
+  ports:
+    - name: metrics
+      port: 9100
+      protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: truenas-node-exporter
+  namespace: monitoring
+  labels:
+    app: truenas-node-exporter
+subsets:
+  - addresses:
+      - ip: 192.168.3.103
+    ports:
+      - name: metrics
+        port: 9100
+        protocol: TCP
+---
+# O Prometheus Operator (instalado pelo kube-prometheus-stack) só observa ServiceMonitors
+# com o label "release: kube-prometheus-stack" (comportamento padrão do chart quando
+# serviceMonitorSelector não é customizado nos values).
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: truenas-node-exporter
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  # Usa o label "jobLabel" do Service (valor "node-exporter") como label "job" do Prometheus,
+  # em vez do nome padrão do Service — mesmo padrão do ServiceMonitor do node-exporter do cluster.
+  # Sem isso, o job viraria "truenas-node-exporter" e o alvo ficaria fora do dashboard
+  # "Node Exporter / Nodes" (filtrado por job="node-exporter").
+  jobLabel: jobLabel
+  selector:
+    matchLabels:
+      app: truenas-node-exporter
+  namespaceSelector:
+    matchNames:
+      - monitoring
+  endpoints:
+    - port: metrics
+      interval: 30s

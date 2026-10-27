@@ -1,0 +1,17 @@
+# nfs-subdir-external-provisioner (release: nfs-subdir-provisioner-ssd)
+# Expõe o dataset ssd-apps/k8s do TrueNAS (via bridge br1, IP estático 192.168.3.103)
+# como StorageClass dinâmica para PVCs que precisam de I/O rápido (ex: Prometheus).
+#
+# Hosts autorizados no export NFS (TrueNAS): 192.168.3.101 (control-plane),
+# 192.168.3.102 (worker1), 192.168.3.105 (worker2).
+
+nfs:
+  server: 192.168.3.103
+  path: /mnt/ssd-apps/k8s
+
+storageClass:
+  name: truenas-nfs-ssd
+  # local-path continua sendo o default do cluster; essa StorageClass é de uso explícito.
+  defaultClass: false
+  reclaimPolicy: Delete
+  accessModes: ReadWriteOnce

@@ -1,11 +1,11 @@
 ---
 name: create-troubleshooting-doc
-description: Cria um documento de troubleshooting/post-mortem no padrão deste repositório (homelab), dentro do diretório troubleshooting/ na raiz do projeto. Use sempre que um problema não-óbvio (bug, configuração quebrada, comportamento inesperado de uma ferramenta) tiver sido diagnosticado e resolvido durante a sessão, e valer a pena documentar para que outro agente ou o próprio usuário não precise re-investigar do zero no futuro.
+description: Cria um documento de troubleshooting/post-mortem bilíngue (PT-BR + EN) no padrão deste repositório (homelab), dentro do diretório troubleshooting/ na raiz do projeto. Use sempre que um problema não-óbvio (bug, configuração quebrada, comportamento inesperado de uma ferramenta) tiver sido diagnosticado e resolvido durante a sessão, e valer a pena documentar para que outro agente ou o próprio usuário não precise re-investigar do zero no futuro.
 ---
 
-# Criar documento de troubleshooting (padrão homelab)
+# Criar documento de troubleshooting (padrão homelab, bilíngue)
 
-Esta skill documenta como escrever um novo arquivo de troubleshooting em `troubleshooting/` seguindo exatamente o padrão já estabelecido nos arquivos existentes deste repositório (`downgrade_kubernetes.md`, `kubevip_lost_ip_attribution_capability.md`, `nvidia_device_plugin_nodeaffinity_requirement.md`, `k3s_install_download_failure_isp.md`).
+Esta skill documenta como escrever um novo arquivo de troubleshooting em `troubleshooting/` seguindo exatamente o padrão já estabelecido nos arquivos existentes deste repositório. Cada documento é **um único arquivo bilíngue** (Português BR + Inglês), seguindo o mesmo padrão já usado em `README.md` e nas descrições de PR (skill `create-pull-request`): conteúdo completo em PT-BR primeiro, depois o mesmo conteúdo completo em EN, no mesmo arquivo.
 
 ## Quando usar
 
@@ -18,44 +18,50 @@ Não use para documentar simples decisões de configuração (isso vai nos `conf
 
 ## Passo 1: Determine o nome do arquivo
 
-- Caminho: `troubleshooting/<nome_descritivo>.md`
+- Caminho: `troubleshooting/<nome_descritivo>.md` — **um único arquivo**, não um arquivo por idioma.
 - Nome em `snake_case`, minúsculo, descritivo do problema (não da solução), em português ou nomes técnicos em inglês quando for termo de ferramenta (ex: `k3s_install_download_failure_isp.md`, `nvidia_device_plugin_nodeaffinity_requirement.md`)
 - Evite nomes genéricos como `bug1.md` ou `fix.md`
 
 ## Passo 2: Estrutura obrigatória do documento
 
-Siga exatamente esta estrutura de seções, nesta ordem:
+O arquivo tem um cabeçalho curto com os links de âncora (mesmo padrão do `README.md`), seguido do conteúdo completo em Português e, depois, o mesmo conteúdo completo em Inglês. Siga exatamente esta estrutura, nesta ordem:
 
 ```markdown
-# Troubleshooting: <título curto e específico do sintoma observado>
+# Troubleshooting: <título curto em português> / <short title in English>
+
+🇧🇷 [Português](#português) | 🇺🇸 [English](#english)
+
+---
+
+## Português
 
 <1-2 frases de resumo do que o documento cobre e em qual componente/ambiente ocorreu>
 
 ---
 
-## 1. O Cenário Inicial e Sintomas
+### 1. O Cenário Inicial e Sintomas
 
 <Contexto: o que estava sendo feito quando o problema apareceu>
 
-### Sintomas do Erro:
+#### Sintomas do Erro:
 * <sintoma observável 1 - mensagem de erro, comportamento incorreto, etc.>
 * <sintoma observável 2>
 * <...>
 
 ---
 
-## 2. Processo de Investigação & Descoberta
+### 2. Processo de Investigação & Descoberta
 
 <Como a investigação foi conduzida - o que foi testado, o que foi descartado>
 
-### Causa Raiz: <nome curto da causa>
+#### Causa Raiz: <nome curto da causa>
 <Explicação técnica precisa da causa raiz, com trechos de config/código relevantes quando aplicável>
 
 **Ponto-chave**: <se houver um insight não-óbvio que vale destacar, coloque em negrito>
 
 ---
 
-## 3. Comandos Aplicados para o Diagnóstico
+### 3. Comandos Aplicados para o Diagnóstico
 
 ```bash
 # comandos reais usados para diagnosticar, com comentários explicando o propósito de cada um
@@ -63,7 +69,7 @@ Siga exatamente esta estrutura de seções, nesta ordem:
 
 ---
 
-## 4. A Correção Definitiva (ou Workaround)
+### 4. A Correção Definitiva (ou Workaround)
 
 <Explicação da correção aplicada>
 
@@ -71,29 +77,91 @@ Siga exatamente esta estrutura de seções, nesta ordem:
 # comandos reais da correção
 ```
 
-### Validação final
+#### Validação final
 ```bash
 # comandos usados para confirmar que a correção funcionou
 ```
 
 ---
 
-## 5. Lições Aprendidas para o Homelab
+### 5. Lições Aprendidas para o Homelab
 
 1. **<lição 1 em negrito curto>** — <explicação de por que isso importa e quando se aplica de novo>
 2. **<lição 2>** — <...>
+3. <...>
+
+---
+
+## English
+
+<1-2 sentence summary of what the document covers and which component/environment it happened in>
+
+---
+
+### 1. Initial Scenario and Symptoms
+
+<Context: what was being done when the problem appeared>
+
+#### Error Symptoms:
+* <observable symptom 1 - error message, incorrect behavior, etc.>
+* <observable symptom 2>
+* <...>
+
+---
+
+### 2. Investigation & Discovery Process
+
+<How the investigation was conducted - what was tested, what was ruled out>
+
+#### Root Cause: <short cause name>
+<Precise technical explanation of the root cause, with relevant config/code excerpts where applicable>
+
+**Key point**: <if there's a non-obvious insight worth highlighting, put it in bold>
+
+---
+
+### 3. Commands Used for Diagnosis
+
+```bash
+# actual commands used to diagnose, with comments explaining the purpose of each
+```
+
+---
+
+### 4. The Definitive Fix (or Workaround)
+
+<Explanation of the fix applied>
+
+```bash
+# actual commands used for the fix
+```
+
+#### Final validation
+```bash
+# commands used to confirm the fix worked
+```
+
+---
+
+### 5. Lessons Learned for the Homelab
+
+1. **<lesson 1, short bold lead>** — <explanation of why it matters and when it applies again>
+2. **<lesson 2>** — <...>
 3. <...>
 ```
 
 ## Passo 3: Regras de conteúdo
 
-- **Use apenas informação real da sessão** — nunca invente comandos, saídas ou causas raiz que não foram de fato observados/confirmados na conversa. Se algo não foi confirmado (ex: causa raiz suspeita mas não validada), diga isso explicitamente em vez de apresentar como certeza.
-- **Comandos devem ser copiáveis e corretos** — copie exatamente os comandos usados na sessão, não paráfrases.
+- **Use apenas informação real da sessão** — nunca invente comandos, saídas ou causas raiz que não foram de fato observados/confirmados na conversa. Se algo não foi confirmado (ex: causa raiz suspeita mas não validada), diga isso explicitamente em vez de apresentar como certeza. Essa regra vale igualmente para as duas versões do texto.
+- **Comandos devem ser copiáveis e corretos** — copie exatamente os comandos usados na sessão, não paráfrases. Os blocos de comando (` ```bash `) são **idênticos** nas duas seções de idioma — comandos não são traduzidos, só o texto ao redor.
 - **Lições aprendidas devem ser generalizáveis** — cada lição deve ajudar a reconhecer ou evitar problemas parecidos no futuro, não apenas recapitular o que aconteceu.
-- **Idioma**: português, mantendo termos técnicos (nomes de comandos, flags, nomes de ferramentas) no idioma original.
-- **Tamanho**: documento deve ser objetivo — não é necessário replicar o nível de detalhe do post-mortem mais extenso do repositório (`kubevip_lost_ip_attribution_capability.md`) se o problema for mais simples; adapte a profundidade de cada seção à complexidade real do caso.
+- **PT-BR primeiro, depois EN** — mesma ordem usada no `README.md` e nas descrições de PR deste repositório.
+- **Título principal (`# Troubleshooting: ...`) bilíngue na mesma linha**, separado por ` / ` — ex: `# Troubleshooting: <título em português> / <title in English>`. Só o título H1 é combinado assim; os demais cabeçalhos (`## Português`, `## English`, e as seções numeradas dentro de cada um) ficam cada um só no seu idioma.
+- **Tradução deve comunicar a mesma coisa, não necessariamente palavra por palavra** — mesmo nível de detalhe e mesma conclusão técnica nas duas versões; não resuma/encurte a versão em inglês em relação à portuguesa (nem o contrário).
+- **Termos técnicos mantidos no idioma original** em ambas as versões (nomes de comandos, flags, nomes de ferramentas, nomes de recursos do Kubernetes) — isso já era a regra em português e se aplica igual ao inglês.
+- **Tamanho**: documento deve ser objetivo — não é necessário replicar o nível de detalhe do post-mortem mais extenso do repositório (`kubevip_lost_ip_attribution_capability.md`) se o problema for mais simples; adapte a profundidade de cada seção à complexidade real do caso. Essa adaptação de profundidade deve ser igual nas duas línguas (não aprofundar só uma versão).
 
 ## Passo 4: Depois de criar
 
-- Se o problema resolvido também mudou o estado de algum componente documentado em `clusters/<nome>/config.md`, atualize esse arquivo também (checklist e/ou log de comandos), mantendo os dois documentos consistentes entre si.
+- Se o problema resolvido também mudou o estado de algum componente documentado em `clusters/<nome>/config.md`, atualize esse arquivo também (checklist e/ou log de comandos), mantendo os dois documentos consistentes entre si. O `config.md` continua só em português (não é um documento bilíngue).
 - Não duplique informação de estado (config atual) dentro do arquivo de troubleshooting — o troubleshooting documenta o *problema e sua resolução*, o `config.md` documenta o *estado atual*.

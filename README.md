@@ -23,16 +23,22 @@ Guarda os manifestos, configurações de infraestrutura e a documentação de es
 ```
 apps/                      Manifestos de aplicações rodando no cluster
   pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, API gateway
+  ntfy/                      ntfy self-hosted (push notifications) - deployment, service, PVC
   gpu-test/                  Pod de teste usado para validar alocação de GPU (benchmark CUDA)
 
 clusters/                  Configuração e estado dos nós do cluster
   control_plane_1/           Reservado para manifestos/config do nó control-plane
   kube-vip/                  Manifestos do Kube-VIP (HA do control-plane + LoadBalancer L2/ARP)
+  observability/config.md    Estado da stack de monitoring/logging: Prometheus, Grafana, Alertmanager, storage NFS
   truenas/config.md          Estado completo do host TrueNAS: hardware, BIOS, pools e datasets ZFS
   worker2/config.md          Estado completo da VM worker2: hardware, SO, driver GPU, histórico de comandos
 
 infrastructure/            Configuração de ferramentas de infraestrutura do cluster
   rancher/                   Values do Rancher
+  monitoring/                Values do kube-prometheus-stack (Prometheus, Grafana, Alertmanager)
+  logging/                   Values do Loki + Grafana Alloy (agregação de logs)
+  gpu-monitoring/            Values do dcgm-exporter + ConfigMap do dashboard (métricas de GPU)
+  storage/                   Values dos provisioners NFS dinâmicos (TrueNAS SSD e HDD)
 
 troubleshooting/           Post-mortems de problemas reais já diagnosticados e resolvidos
   *.md                       Um arquivo por problema, seguindo um padrão fixo (ver ia/skills/)
@@ -80,16 +86,22 @@ It holds the manifests, infrastructure configuration, and state/diagnostic docum
 ```
 apps/                      Application manifests running on the cluster
   pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, API gateway
+  ntfy/                      Self-hosted ntfy (push notifications) - deployment, service, PVC
   gpu-test/                  Test pod used to validate GPU allocation (CUDA benchmark)
 
 clusters/                  Configuration and state of the cluster nodes
   control_plane_1/           Reserved for control-plane node manifests/config
   kube-vip/                  Kube-VIP manifests (control-plane HA + L2/ARP LoadBalancer)
+  observability/config.md    State of the monitoring/logging stack: Prometheus, Grafana, Alertmanager, NFS storage
   truenas/config.md          Full state of the TrueNAS host: hardware, BIOS, ZFS pools and datasets
   worker2/config.md          Full state of the worker2 VM: hardware, OS, GPU driver, command history
 
 infrastructure/            Cluster infrastructure tooling configuration
   rancher/                   Rancher values
+  monitoring/                kube-prometheus-stack values (Prometheus, Grafana, Alertmanager)
+  logging/                   Loki + Grafana Alloy values (log aggregation)
+  gpu-monitoring/            dcgm-exporter values + dashboard ConfigMap (GPU metrics)
+  storage/                   Dynamic NFS provisioner values (TrueNAS SSD and HDD)
 
 troubleshooting/           Post-mortems of real issues already diagnosed and resolved
   *.md                       One file per issue, following a fixed template (see ia/skills/)
