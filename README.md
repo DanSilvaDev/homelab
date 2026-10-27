@@ -37,6 +37,7 @@ infrastructure/            Configuração de ferramentas de infraestrutura do cl
   rancher/                   Values do Rancher
   monitoring/                Values do kube-prometheus-stack (Prometheus, Grafana, Alertmanager)
   logging/                   Values do Loki + Grafana Alloy (agregação de logs)
+  gpu-monitoring/            Values do dcgm-exporter + ConfigMap do dashboard (métricas de GPU)
   storage/                   Values dos provisioners NFS dinâmicos (TrueNAS SSD e HDD)
 
 troubleshooting/           Post-mortems de problemas reais já diagnosticados e resolvidos
@@ -99,6 +100,7 @@ infrastructure/            Cluster infrastructure tooling configuration
   rancher/                   Rancher values
   monitoring/                kube-prometheus-stack values (Prometheus, Grafana, Alertmanager)
   logging/                   Loki + Grafana Alloy values (log aggregation)
+  gpu-monitoring/            dcgm-exporter values + dashboard ConfigMap (GPU metrics)
   storage/                   Dynamic NFS provisioner values (TrueNAS SSD and HDD)
 
 troubleshooting/           Post-mortems of real issues already diagnosed and resolved

@@ -130,6 +130,11 @@ grafana:
       access: proxy
       url: http://loki.monitoring.svc.cluster.local:3100
       isDefault: false
+  # Dashboard do dcgm-exporter: NÃO usa o mecanismo `dashboards.<provider>.<nome>.gnetId`
+  # do chart (tentado e descartado - essa versão do Grafana não processa o initContainer
+  # de download via gnetId corretamente, dashboard nunca aparecia). Aplicado em vez disso
+  # como ConfigMap manual (infrastructure/gpu-monitoring/dcgm-exporter-dashboard-configmap.yaml),
+  # usando o mesmo label (grafana_dashboard: "1") que o sidecar já usa pros dashboards padrão.
   persistence:
     enabled: true
     storageClassName: truenas-nfs-ssd

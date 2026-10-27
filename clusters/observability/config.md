@@ -135,6 +135,23 @@ Agregação de logs de todos os pods do cluster, consultável no Grafana (Explor
 - `kubectl top pod` confirmou uso de memória bem abaixo do limit configurado.
 - Grafana Explore → datasource Loki → query `{namespace="monitoring"}` retornou logs dos pods do namespace.
 
+## dcgm-exporter (métricas de GPU do worker2)
+
+Métricas da GPU (GTX 970, Maxwell) via NVIDIA DCGM, scrapeadas pelo Prometheus.
+
+- Chart: `gpu-helm-charts/dcgm-exporter` (`https://nvidia.github.io/dcgm-exporter/helm-charts`), versão `4.8.4`, release `dcgm-exporter`, namespace `nvidia-device-plugin` (mesmo namespace do `nvidia-device-plugin`, pra agrupar infra de GPU). Values: `infrastructure/gpu-monitoring/dcgm-exporter-values.yaml`.
+- **Sem o gotcha de `nodeAffinity` oculta** que pegou o `nvdp/nvidia-device-plugin` (ver [troubleshooting/nvidia_device_plugin_nodeaffinity_requirement.md](../../troubleshooting/nvidia_device_plugin_nodeaffinity_requirement.md)) — confirmado lendo o template do chart; `nodeSelector: {gpu: "true"}` sozinho já restringe ao worker2.
+- `resources.limits["nvidia.com/gpu"]: "1"` adicionado manualmente (replica o padrão já validado no pod de teste CUDA), além dos defaults de cpu/memory do chart (já adequados ao homelab).
+- `serviceMonitor.enabled: true` + `additionalLabels: {release: kube-prometheus-stack}` — sem essa label o Prometheus Operator ignora o ServiceMonitor (mesmo motivo já documentado na seção do TrueNAS).
+- **Limitação da GPU (Maxwell, compute capability 5.2)**: o módulo de *profiling* do DCGM (métricas `DCGM_FI_PROF_*`, incluindo o painel "Tensor Core Utilization" do dashboard) exige Volta+ e não funciona nessa GPU. Métricas básicas (utilização, memória, temperatura, potência, clocks, ECC) funcionam normalmente — validado via `/metrics` do exporter.
+
+### Dashboard no Grafana
+O dashboard oficial (grafana.com ID 12239) **não pôde ser importado pelo mecanismo automático** do chart (`grafana.dashboards.<provider>.<nome>.gnetId`) — falhava silenciosamente nessa versão do Grafana, sem nenhum log de erro. Aplicado como ConfigMap manual (`infrastructure/gpu-monitoring/dcgm-exporter-dashboard-configmap.yaml`, label `grafana_dashboard: "1"`, mesmo mecanismo de sidecar já usado pelos dashboards padrão do chart), aplicado direto via `kubectl apply` (fora do Helm release). Detalhes completos do diagnóstico: [troubleshooting/grafana_dashboard_gnetid_silent_failure.md](../../troubleshooting/grafana_dashboard_gnetid_silent_failure.md).
+
+### Validação realizada
+- `kubectl logs ... -c download-dashboards` e `/metrics` do exporter confirmaram GPU real sendo lida (temperatura, potência, framebuffer).
+- Dashboard "NVIDIA DCGM Exporter Dashboard" confirmado visível e funcional no Grafana (painéis de profiling sem dado, como esperado).
+
 ## Próximos passos
 - [x] Storage dinâmico via NFS (TrueNAS) — SSD e HDD
 - [x] Instalar kube-prometheus-stack (Prometheus + Grafana + Alertmanager)
@@ -144,7 +161,7 @@ Agregação de logs de todos os pods do cluster, consultável no Grafana (Explor
 - [x] Configurar Alertmanager → Telegram (receiver nativo `telegram_configs`)
 - [x] Configurar Alertmanager → ntfy self-hosted (push no celular, `webhook_configs`)
 - [x] Instalar Loki + Grafana Alloy (logs), usando `truenas-nfs-hdd` como storage
-- [ ] (Opcional) `dcgm-exporter` da NVIDIA para métricas de GPU do worker2
+- [x] `dcgm-exporter` da NVIDIA para métricas de GPU do worker2
 
 ## Log de comandos executados
 
@@ -260,4 +277,23 @@ helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheu
 # Validacao
 kubectl get pods -n monitoring -l app.kubernetes.io/name=alloy
 kubectl top pod -n monitoring -l app.kubernetes.io/name=alloy
+
+# dcgm-exporter (metricas de GPU)
+helm repo add gpu-helm-charts https://nvidia.github.io/dcgm-exporter/helm-charts
+helm repo update
+
+helm upgrade --install dcgm-exporter gpu-helm-charts/dcgm-exporter \
+  --namespace nvidia-device-plugin \
+  -f infrastructure/gpu-monitoring/dcgm-exporter-values.yaml \
+  --version 4.8.4
+
+# Validacao: GPU real sendo lida (ver troubleshooting doc p/ diagnostico do dashboard)
+kubectl get pods -n nvidia-device-plugin -l app.kubernetes.io/name=dcgm-exporter -o wide
+kubectl run curl-test --rm -it --image=curlimages/curl --restart=Never -n nvidia-device-plugin -- \
+  curl -s http://dcgm-exporter.nvidia-device-plugin.svc.cluster.local:9400/metrics
+
+# Fix: dashboard via gnetId falhava silenciosamente (ver troubleshooting doc) - aplicado
+# como ConfigMap manual em vez da chave grafana.dashboards.default.dcgm-exporter.gnetId
+kubectl apply -f infrastructure/gpu-monitoring/dcgm-exporter-dashboard-configmap.yaml
+kubectl logs -n monitoring -l app.kubernetes.io/name=grafana -c grafana-sc-dashboard --tail=10
 ```
