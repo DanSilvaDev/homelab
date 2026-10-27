@@ -1,0 +1,67 @@
+# Grafana Alloy (grafana/alloy) - coletor de logs, roda como DaemonSet (controller.type
+# default) em todos os nodes do cluster (control-plane, worker1, worker2).
+# Descobre pods via API do Kubernetes (loki.source.kubernetes) e envia pro Loki.
+
+alloy:
+  configMap:
+    create: true
+    content: |-
+      loki.write "default" {
+        endpoint {
+          url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+        }
+      }
+
+      discovery.kubernetes "pod" {
+        role = "pod"
+        selectors {
+          role  = "pod"
+          field = "spec.nodeName=" + coalesce(sys.env("HOSTNAME"), constants.hostname)
+        }
+      }
+
+      discovery.relabel "pod_logs" {
+        targets = discovery.kubernetes.pod.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          action        = "replace"
+          target_label  = "namespace"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          action        = "replace"
+          target_label  = "pod"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          action        = "replace"
+          target_label  = "container"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace", "__meta_kubernetes_pod_container_name"]
+          action        = "replace"
+          target_label  = "job"
+          separator     = "/"
+          replacement   = "$1"
+        }
+      }
+
+      loki.source.kubernetes "pod_logs" {
+        targets    = discovery.relabel.pod_logs.output
+        forward_to = [loki.write.default.receiver]
+      }
+
+  # Valores iniciais (128Mi/512Mi) validados via `kubectl top pod` pós-deploy: uso real
+  # ficou entre 47-88Mi nos 3 pods, bem abaixo do limit - reduzido pela metade (64Mi/256Mi)
+  # mantendo ~3x de margem sobre o pico observado (88Mi).
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi

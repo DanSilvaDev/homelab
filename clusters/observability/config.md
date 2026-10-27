@@ -4,7 +4,7 @@ Propósito: stack de métricas, dashboards e alertas para o cluster k3s, mais o 
 
 Ver também: [TrueNAS - config.md](../truenas/config.md) | [Worker2 - config.md](../worker2/config.md)
 
-Status: Prometheus + Grafana + Alertmanager instalados e validados (métricas dos 3 nodes confirmadas). Roteamento de alertas (Telegram + ntfy) configurado e validado. Pendente: stack de logs (Loki + Alloy).
+Status: Prometheus + Grafana + Alertmanager instalados e validados (métricas dos 3 nodes confirmadas). Roteamento de alertas (Telegram + ntfy) configurado e validado. Stack de logs (Loki + Alloy) instalada e validada (logs visíveis no Grafana Explore).
 
 ## Storage dinâmico (pré-requisito)
 
@@ -13,7 +13,7 @@ Dois provisioners NFS dedicados, apontando para datasets do TrueNAS (ver [truena
 | StorageClass | Provisioner (release Helm) | Backend TrueNAS | Uso |
 |---|---|---|---|
 | `truenas-nfs-ssd` | `nfs-subdir-provisioner-ssd` | `ssd-apps/k8s` (SSD, quota 40GiB) | Dados sensíveis a I/O (Prometheus, Grafana, Alertmanager) |
-| `truenas-nfs-hdd` | `nfs-subdir-provisioner-hdd` | `data/k8s` (HD WD Blue 1TB, quota 100GiB) | Reservado para uso futuro (ex: Loki), dados maiores/menos sensíveis a latência |
+| `truenas-nfs-hdd` | `nfs-subdir-provisioner-hdd` | `data/k8s` (HD WD Blue 1TB, quota 100GiB) | Loki (dados maiores, menos sensíveis a latência) |
 
 - Chart: `nfs-subdir-external-provisioner/nfs-subdir-external-provisioner`, versão `4.0.18`
 - Namespace: `nfs-provisioner`
@@ -113,6 +113,28 @@ Ao sobrescrever `alertmanager.config.receivers`, é preciso reincluir manualment
 ### Validação realizada
 Alerta de teste disparado via `POST /api/v2/alerts` do Alertmanager chegou tanto no Telegram quanto no ntfy (push no celular).
 
+## Loki + Grafana Alloy (logs)
+
+Agregação de logs de todos os pods do cluster, consultável no Grafana (Explore).
+
+- **Loki**: chart `grafana-community/loki` (repo migrou de `grafana/helm-charts` em 2026-03-16), versão `18.7.6`, release `loki`, namespace `monitoring`. Values: `infrastructure/logging/loki-values.yaml`.
+- **Alloy**: chart `grafana/alloy` (continua no repo clássico), release `alloy`, namespace `monitoring`. Values: `infrastructure/logging/alloy-values.yaml`. Roda como DaemonSet (todos os 3 nodes), descobre pods via API do Kubernetes (`loki.source.kubernetes`, sem precisar montar `/var/log/pods` do host) e envia pro Loki via DNS interno (`http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push`).
+
+### Decisões de configuração
+- **Modo**: `deploymentMode: Monolithic` (nome atual de "SingleBinary", chart >= 12.0.0) — um único pod, adequado ao volume de log de um homelab de 3 nodes.
+- **Storage**: filesystem (sem S3/minio), PVC `10Gi` via `truenas-nfs-hdd`.
+- **Retenção**: 7 dias, via `compactor.retention_enabled` (mecanismo atual; `tableManager` está deprecado).
+- **Caches desabilitados** (`chunksCache`/`resultsCache`): o default do chart pede até 8GB de RAM pra memcached — inviável no homelab e desnecessário pro volume de log baixo esperado aqui.
+- **Gateway (nginx) desabilitado**: só tráfego interno do cluster, sem necessidade de proxy/auth na frente — mesmo modelo de confiança já usado em Prometheus/Alertmanager/ntfy (sem autenticação própria, aceitável só dentro da LAN confiável).
+- **Service do Loki**: `ClusterIP` (não `LoadBalancer`/kube-vip) — os únicos clientes (Alloy grava, Grafana lê) rodam dentro do cluster; ninguém de fora precisa alcançar o Loki diretamente, você sempre acessa via Grafana.
+- **Resources do Alloy**: request `64Mi`/limit `256Mi` de memória. Valor inicial (`128Mi`/`512Mi`, com folga de propósito por falta de um baseline oficial de overhead por node na documentação do Alloy) validado via `kubectl top pod` — uso real ficou entre 47-88Mi nos 3 pods — e reduzido pela metade, mantendo ~3x de margem sobre o pico observado.
+- **Datasource no Grafana**: adicionado via `grafana.additionalDataSources` em `infrastructure/monitoring/values.yaml` (não um ConfigMap separado), apontando pro Service `loki` na porta `3100`.
+
+### Validação realizada
+- `kubectl get pods -n monitoring -l app.kubernetes.io/name=alloy` — 3 pods `Running` (um por node).
+- `kubectl top pod` confirmou uso de memória bem abaixo do limit configurado.
+- Grafana Explore → datasource Loki → query `{namespace="monitoring"}` retornou logs dos pods do namespace.
+
 ## Próximos passos
 - [x] Storage dinâmico via NFS (TrueNAS) — SSD e HDD
 - [x] Instalar kube-prometheus-stack (Prometheus + Grafana + Alertmanager)
@@ -121,7 +143,7 @@ Alerta de teste disparado via `POST /api/v2/alerts` do Alertmanager chegou tanto
 - [x] Coletar métricas do host TrueNAS (fora do cluster) via node_exporter + ServiceMonitor manual
 - [x] Configurar Alertmanager → Telegram (receiver nativo `telegram_configs`)
 - [x] Configurar Alertmanager → ntfy self-hosted (push no celular, `webhook_configs`)
-- [ ] Instalar Loki + Grafana Alloy (logs), usando `truenas-nfs-hdd` como storage
+- [x] Instalar Loki + Grafana Alloy (logs), usando `truenas-nfs-hdd` como storage
 - [ ] (Opcional) `dcgm-exporter` da NVIDIA para métricas de GPU do worker2
 
 ## Log de comandos executados
@@ -211,4 +233,31 @@ helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheu
 curl -i -H "Content-Type: application/json" \
   -d '[{"labels":{"alertname":"TesteHomelab","severity":"info"}}]' \
   http://192.168.3.204/api/v2/alerts
+
+# Loki + Grafana Alloy (logs)
+helm repo add grafana-community https://grafana-community.github.io/helm-charts
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+
+helm upgrade --install loki grafana-community/loki \
+  --namespace monitoring \
+  -f infrastructure/logging/loki-values.yaml \
+  --version 18.7.6
+
+# Confirma nome/porta do Service do Loki antes de apontar o Alloy/datasource pra ele
+kubectl get svc -n monitoring | grep loki
+
+helm upgrade --install alloy grafana/alloy \
+  --namespace monitoring \
+  -f infrastructure/logging/alloy-values.yaml
+
+# Reaplica o kube-prometheus-stack com o datasource Loki no Grafana
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  -f infrastructure/monitoring/values.yaml \
+  --version 92.13.1
+
+# Validacao
+kubectl get pods -n monitoring -l app.kubernetes.io/name=alloy
+kubectl top pod -n monitoring -l app.kubernetes.io/name=alloy
 ```

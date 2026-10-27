@@ -1,0 +1,92 @@
+# Loki (grafana-community/loki) - armazenamento e índice de logs
+# Repo do chart migrou de grafana/helm-charts para grafana-community/helm-charts em 2026-03-16.
+# Modo Monolithic (nome atual de "SingleBinary", chart >= 12.0.0): tudo num único pod,
+# adequado para o volume de log de um homelab de 3 nodes.
+deploymentMode: Monolithic
+
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+  # Retenção de logs: compactor é o mecanismo atual (tableManager está deprecado).
+  compactor:
+    working_directory: /var/loki/retention
+    compaction_interval: 10m
+    retention_enabled: true
+    retention_delete_delay: 2h
+    delete_request_store: filesystem
+  limits_config:
+    retention_period: 168h # 7 dias
+    allow_structured_metadata: true
+    volume_enabled: true
+
+singleBinary:
+  replicas: 1
+  persistence:
+    storageClass: truenas-nfs-hdd
+    accessModes: ["ReadWriteOnce"]
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Modo Monolithic concentra tudo no singleBinary; zera os componentes do modo
+# SimpleScalable/Distributed, que o chart não usa aqui mas ainda define por padrão.
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0
+ingester:
+  replicas: 0
+querier:
+  replicas: 0
+queryFrontend:
+  replicas: 0
+queryScheduler:
+  replicas: 0
+distributor:
+  replicas: 0
+indexGateway:
+  replicas: 0
+bloomPlanner:
+  replicas: 0
+bloomBuilder:
+  replicas: 0
+bloomGateway:
+  replicas: 0
+
+# gateway (nginx na frente do Loki): desnecessário, só tráfego interno do cluster
+# (mesmo modelo de confiança sem auth já usado em Prometheus/Alertmanager).
+gateway:
+  enabled: false
+
+# Caches em memcached vêm habilitados por padrão pedindo até 8GB de RAM - inviável
+# no homelab e desnecessário para o volume de log baixo esperado aqui.
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+
+monitoring:
+  serviceMonitor:
+    enabled: false
+
+minio:
+  enabled: false

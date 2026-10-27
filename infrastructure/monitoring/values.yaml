@@ -122,6 +122,14 @@ grafana:
     type: LoadBalancer
     # IP fixo alocado pelo kube-vip-cloud-provider (range 192.168.3.200-254)
     loadBalancerIP: 192.168.3.201
+  # Loki (infrastructure/logging/loki-values.yaml), alcançado via DNS interno do cluster.
+  # Service/porta confirmados via `kubectl get svc -n monitoring | grep loki`.
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki.monitoring.svc.cluster.local:3100
+      isDefault: false
   persistence:
     enabled: true
     storageClassName: truenas-nfs-ssd

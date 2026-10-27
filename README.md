@@ -36,6 +36,7 @@ clusters/                  Configuração e estado dos nós do cluster
 infrastructure/            Configuração de ferramentas de infraestrutura do cluster
   rancher/                   Values do Rancher
   monitoring/                Values do kube-prometheus-stack (Prometheus, Grafana, Alertmanager)
+  logging/                   Values do Loki + Grafana Alloy (agregação de logs)
   storage/                   Values dos provisioners NFS dinâmicos (TrueNAS SSD e HDD)
 
 troubleshooting/           Post-mortems de problemas reais já diagnosticados e resolvidos
@@ -97,6 +98,7 @@ clusters/                  Configuration and state of the cluster nodes
 infrastructure/            Cluster infrastructure tooling configuration
   rancher/                   Rancher values
   monitoring/                kube-prometheus-stack values (Prometheus, Grafana, Alertmanager)
+  logging/                   Loki + Grafana Alloy values (log aggregation)
   storage/                   Dynamic NFS provisioner values (TrueNAS SSD and HDD)
 
 troubleshooting/           Post-mortems of real issues already diagnosed and resolved
