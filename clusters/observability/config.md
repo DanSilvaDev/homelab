@@ -113,6 +113,17 @@ Ao sobrescrever `alertmanager.config.receivers`, é preciso reincluir manualment
 ### Validação realizada
 Alerta de teste disparado via `POST /api/v2/alerts` do Alertmanager chegou tanto no Telegram quanto no ntfy (push no celular).
 
+## Alertas nativos do Grafana (export versionado)
+
+Além do roteamento feito pelo Alertmanager (seção acima), também existem regras de alerta criadas diretamente na UI do Grafana (Alerting → Alert rules), usando o datasource Prometheus já configurado pelo chart. Essas regras são exportadas manualmente pela própria UI (Alerting → Alert rules → Export → formato de provisionamento) e versionadas em `apps/grafana/alerts/` como backup/histórico — a exportação **não é reaplicada automaticamente** no cluster (o Helm release não tem o sidecar de provisionamento de alertas do chart habilitado); recriar a regra exige reimportá-la pela própria UI, ou futuramente habilitar `grafana.sidecar.alerts` apontando pra essa pasta, caso essa automação seja adotada.
+
+### `apps/grafana/alerts/alert_node_is_down.yaml`
+- Regra: **Node unresponsive**, pasta `Cluster`.
+- Condição: `up{job="node-exporter"} < 1` por 5 minutos (query instantânea reduzida contra o threshold).
+- `noDataState: NoData` + `execErrState: Error` — ausência de dados e erro de execução da query também contam como alerta.
+- Notificação: contact point `Alert Manager` (encaminha pro Alertmanager nativo do kube-prometheus-stack, que então roteia pro Telegram/ntfy conforme a seção acima).
+- Intervalo de avaliação do grupo: 5m.
+
 ## Loki + Grafana Alloy (logs)
 
 Agregação de logs de todos os pods do cluster, consultável no Grafana (Explore).
@@ -162,6 +173,8 @@ O dashboard oficial (grafana.com ID 12239) **não pôde ser importado pelo mecan
 - [x] Configurar Alertmanager → ntfy self-hosted (push no celular, `webhook_configs`)
 - [x] Instalar Loki + Grafana Alloy (logs), usando `truenas-nfs-hdd` como storage
 - [x] `dcgm-exporter` da NVIDIA para métricas de GPU do worker2
+- [x] Primeira regra de alerta nativa do Grafana versionada (`apps/grafana/alerts/alert_node_is_down.yaml`)
+- [ ] Configurar `grafana.sidecar.alerts` para provisionar `apps/grafana/alerts/` automaticamente (hoje é só export manual via UI)
 
 ## Log de comandos executados
 
