@@ -133,7 +133,7 @@ O chart Helm `nvdp/nvidia-device-plugin` exige, além do `nodeSelector` customiz
 - `nvidia.com/gpu.present=true` ← label escolhido manualmente (mais simples sem precisar instalar NFD/GPU Operator)
 
 ### Nó no cluster
-- k3s version: `v1.36.5+k3s1` (igual ao control-plane — requisito do Rancher, que ainda não suporta v1.37)
+- k3s version: `v1.36.5+k3s1` (igual ao control-plane; antes era requisito do Rancher, removido em 2026-10-28 — sem trava externa agora, mas mantido sem upgrade por ora)
 - Join confirmado via `kubectl get nodes` no control-plane
 
 ## Log de comandos executados

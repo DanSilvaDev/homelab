@@ -6,7 +6,7 @@
 
 ## Português
 
-Repositório do meu homelab pessoal: um cluster **Kubernetes (k3s)** multi-servidor, gerenciado via **Rancher**, rodando em hardware físico dedicado — incluindo um nó worker com **aceleração GPU (NVIDIA GTX 970 via PCI passthrough)** hospedado como VM num servidor **TrueNAS SCALE**.
+Repositório do meu homelab pessoal: um cluster **Kubernetes (k3s)** multi-servidor, rodando em hardware físico dedicado — incluindo um nó worker com **aceleração GPU (NVIDIA GTX 970 via PCI passthrough)** hospedado como VM num servidor **TrueNAS SCALE**.
 
 Guarda os manifestos, configurações de infraestrutura e a documentação de estado/diagnóstico de todo o ambiente, servindo tanto de referência pessoal quanto de contexto para agentes de IA que ajudam a operar e evoluir o cluster.
 
@@ -35,7 +35,6 @@ clusters/                  Configuração e estado dos nós do cluster
   worker2/config.md          Estado completo da VM worker2: hardware, SO, driver GPU, histórico de comandos
 
 infrastructure/            Configuração de ferramentas de infraestrutura do cluster
-  rancher/                   Values do Rancher
   monitoring/                Values do kube-prometheus-stack (Prometheus, Grafana, Alertmanager)
   logging/                   Values do Loki + Grafana Alloy (agregação de logs)
   gpu-monitoring/            Values do dcgm-exporter + ConfigMap do dashboard (métricas de GPU)
@@ -70,7 +69,7 @@ Em evolução contínua — próximos passos e detalhes de cada componente estã
 
 ## English
 
-Repository for my personal homelab: a multi-server **Kubernetes (k3s)** cluster, managed via **Rancher**, running on dedicated physical hardware — including a worker node with **GPU acceleration (NVIDIA GTX 970 via PCI passthrough)** hosted as a VM on a **TrueNAS SCALE** server.
+Repository for my personal homelab: a multi-server **Kubernetes (k3s)** cluster, running on dedicated physical hardware — including a worker node with **GPU acceleration (NVIDIA GTX 970 via PCI passthrough)** hosted as a VM on a **TrueNAS SCALE** server.
 
 It holds the manifests, infrastructure configuration, and state/diagnostic documentation for the whole environment, serving both as a personal reference and as context for AI agents that help operate and evolve the cluster.
 
@@ -99,7 +98,6 @@ clusters/                  Configuration and state of the cluster nodes
   worker2/config.md          Full state of the worker2 VM: hardware, OS, GPU driver, command history
 
 infrastructure/            Cluster infrastructure tooling configuration
-  rancher/                   Rancher values
   monitoring/                kube-prometheus-stack values (Prometheus, Grafana, Alertmanager)
   logging/                   Loki + Grafana Alloy values (log aggregation)
   gpu-monitoring/            dcgm-exporter values + dashboard ConfigMap (GPU metrics)

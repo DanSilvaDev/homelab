@@ -1,5 +1,5 @@
 # kube-prometheus-stack (prometheus-community/kube-prometheus-stack)
-# Cluster: k3s via Rancher
+# Cluster: k3s (Rancher removido em 2026-10-28, ver troubleshooting/rancher_removal_traefik_crd_conflict.md)
 #   - kubecluster-lenovo-z40-70 (control-plane): 4 vCPU / 15GiB RAM, ~896GB disco
 #   - worker1: 4 vCPU / 15GiB RAM, ~93GB disco
 #   - worker2: 5 vCPU / 10GiB RAM, GPU (GTX 970), ~18GB disco (label gpu=true)
