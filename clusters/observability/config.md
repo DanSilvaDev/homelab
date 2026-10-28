@@ -46,7 +46,7 @@ O cluster usa `kube-vip-cloud-provider` com range de IPs `192.168.3.200-254` par
 | Serviço | IP | Porta | DNS local (Pi-hole) |
 |---|---|---|---|
 | Grafana | `192.168.3.201` | 80 | `dashboard.home` |
-| Rancher | `192.168.3.202` | — | `rancher.home` |
+| ~~Rancher~~ | ~~`192.168.3.202`~~ | — | Rancher removido em 2026-10-28, IP liberado para reuso futuro — ver [troubleshooting/rancher_removal_traefik_crd_conflict.md](../../troubleshooting/rancher_removal_traefik_crd_conflict.md) |
 | Prometheus | `192.168.3.203` | 80 (targetPort 9090) | `prometheus.home` |
 | Alertmanager | `192.168.3.204` | 80 (targetPort 9093) | `alert.home` |
 | ntfy | `192.168.3.205` | 80 | `ntfy.home` |
@@ -113,6 +113,17 @@ Ao sobrescrever `alertmanager.config.receivers`, é preciso reincluir manualment
 ### Validação realizada
 Alerta de teste disparado via `POST /api/v2/alerts` do Alertmanager chegou tanto no Telegram quanto no ntfy (push no celular).
 
+## Alertas nativos do Grafana (export versionado)
+
+Além do roteamento feito pelo Alertmanager (seção acima), também existem regras de alerta criadas diretamente na UI do Grafana (Alerting → Alert rules), usando o datasource Prometheus já configurado pelo chart. Essas regras são exportadas manualmente pela própria UI (Alerting → Alert rules → Export → formato de provisionamento) e versionadas em `apps/grafana/alerts/` como backup/histórico — a exportação **não é reaplicada automaticamente** no cluster (o Helm release não tem o sidecar de provisionamento de alertas do chart habilitado); recriar a regra exige reimportá-la pela própria UI, ou futuramente habilitar `grafana.sidecar.alerts` apontando pra essa pasta, caso essa automação seja adotada.
+
+### `apps/grafana/alerts/alert_node_is_down.yaml`
+- Regra: **Node unresponsive**, pasta `Cluster`.
+- Condição: `up{job="node-exporter"} < 1` por 5 minutos (query instantânea reduzida contra o threshold).
+- `noDataState: NoData` + `execErrState: Error` — ausência de dados e erro de execução da query também contam como alerta.
+- Notificação: contact point `Alert Manager` (encaminha pro Alertmanager nativo do kube-prometheus-stack, que então roteia pro Telegram/ntfy conforme a seção acima).
+- Intervalo de avaliação do grupo: 5m.
+
 ## Loki + Grafana Alloy (logs)
 
 Agregação de logs de todos os pods do cluster, consultável no Grafana (Explore).
@@ -162,6 +173,9 @@ O dashboard oficial (grafana.com ID 12239) **não pôde ser importado pelo mecan
 - [x] Configurar Alertmanager → ntfy self-hosted (push no celular, `webhook_configs`)
 - [x] Instalar Loki + Grafana Alloy (logs), usando `truenas-nfs-hdd` como storage
 - [x] `dcgm-exporter` da NVIDIA para métricas de GPU do worker2
+- [x] Primeira regra de alerta nativa do Grafana versionada (`apps/grafana/alerts/alert_node_is_down.yaml`)
+- [ ] Configurar `grafana.sidecar.alerts` para provisionar `apps/grafana/alerts/` automaticamente (hoje é só export manual via UI)
+- [x] Remover o Rancher do cluster (conflito de CRD com Traefik) e desabilitar o Traefik — ver [troubleshooting/rancher_removal_traefik_crd_conflict.md](../../troubleshooting/rancher_removal_traefik_crd_conflict.md)
 
 ## Log de comandos executados
 

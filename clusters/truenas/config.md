@@ -52,7 +52,7 @@ Finalidade: armazenamento veloz para VM/Kubernetes
 | `vm-k3s-disk` | zvol | 40 GiB, volblocksize 16K, LZ4, sync Standard, sparse off, dedup off | Disco virtual exclusivo da VM worker2 |
 | `fast-data` | dataset | recordsize 128K, LZ4, sync Standard, atime off | Storage rápido genérico via NFS; contém `os_images/` (ISOs de instalação) |
 | `databases` | dataset | recordsize 16K, LZ4, sync Standard | Reservado para bancos (Postgres/Redis) — recordsize ajustado ao page size dessas engines |
-| `k8s` | dataset | recordsize 128K, LZ4, sync Standard, quota ~40GiB | Export NFS para PVs dinâmicos do cluster k3s (Rancher Monitoring, Loki) via `nfs-subdir-external-provisioner`. Hosts autorizados: `192.168.3.101` (control-plane), `192.168.3.102` (worker1), `192.168.3.105` (worker2) |
+| `k8s` | dataset | recordsize 128K, LZ4, sync Standard, quota ~40GiB | Export NFS para PVs dinâmicos do cluster k3s (kube-prometheus-stack, Loki) via `nfs-subdir-external-provisioner`. Hosts autorizados: `192.168.3.101` (control-plane), `192.168.3.102` (worker1), `192.168.3.105` (worker2) |
 
 ### `data` (Stripe, HD WD Blue 1TB)
 Finalidade: armazenamento geral, mídias (Jellyfin/Plex) e backups

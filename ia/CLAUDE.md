@@ -4,7 +4,9 @@ Este arquivo dá contexto rápido para qualquer agente de IA (Claude ou outro) q
 
 ## Visão geral
 
-Homelab pessoal com um cluster **k3s** multi-servidor, gerenciado via **Rancher**, rodando em hardware físico separado. Um dos servidores (TrueNAS SCALE) hospeda uma VM que atua como worker node com aceleração GPU via PCI passthrough.
+Homelab pessoal com um cluster **k3s** multi-servidor, rodando em hardware físico separado. Um dos servidores (TrueNAS SCALE) hospeda uma VM que atua como worker node com aceleração GPU via PCI passthrough.
+
+O cluster já foi gerenciado via Rancher; removido em 2026-10-28 (observability stack própria já cobria o que o Rancher oferecia, e sua remoção também resolveu um conflito de ownership de CRD entre `traefik-crd` e `gateway-api-crd` — ver [troubleshooting/rancher_removal_traefik_crd_conflict.md](../troubleshooting/rancher_removal_traefik_crd_conflict.md)). O Traefik (dependência do Rancher) também foi desabilitado no k3s.
 
 ## Estrutura do repositório
 
@@ -17,8 +19,6 @@ clusters/
   kube-vip/               -> manifestos do Kube-VIP (HA do control-plane + LoadBalancer L2/ARP)
 apps/
   pihole/                 -> manifestos do Pi-hole rodando no cluster
-infrastructure/
-  rancher/                -> values do Rancher
 troubleshooting/
   *.md                    -> post-mortems de problemas reais já resolvidos (ver convenção abaixo)
 ia/
@@ -40,7 +40,7 @@ Antes de propor mudanças de infraestrutura, **sempre leia primeiro** `clusters/
 
 1. **Documentação de estado** (`clusters/*/config.md`): formato Markdown, atualizado incrementalmente conforme mudanças são feitas — nunca reescrito do zero. Sempre mantenha o checklist de "Próximos passos" e o "Log de comandos executados" sincronizados com a realidade.
 2. **Documentação de troubleshooting** (`troubleshooting/*.md`): post-mortems de problemas não-óbvios já resolvidos, seguindo uma estrutura fixa (cenário/sintomas → investigação/causa raiz → comandos de diagnóstico → correção → lições aprendidas). Ver a skill `create-troubleshooting-doc` em `ia/skills/` para o template exato e quando usá-la.
-3. **Versões de k3s**: o cluster é gerenciado via Rancher, que impõe restrição de compatibilidade de minor version do Kubernetes. Sempre confirmar a versão suportada antes de sugerir upgrades.
+3. **Versões de k3s**: sem o Rancher, não há mais trava externa de minor version — mas ainda confirme compatibilidade (chart versions, drivers) antes de sugerir upgrades.
 4. **Branch de driver NVIDIA**: a GTX 970 (Maxwell) só é suportada até a branch `580` do driver NVIDIA — não sugerir upgrade para branches `590+` nesse hardware.
 
 ## Diretório `ia/skills/`
