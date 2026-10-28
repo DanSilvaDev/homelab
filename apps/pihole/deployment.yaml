@@ -5,6 +5,8 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: pihole-app
@@ -43,12 +45,14 @@ spec:
             - name: pihole-pv
               mountPath: "/etc/pihole"
           resources:
+            # Uso real medido via `kubectl top pod`: 9-16m CPU / 81-136Mi memoria.
+            # Limits com margem para picos (atualizacao do gravity.db, rajadas de consulta).
             limits:
-              memory: 2G
-              cpu: 1
+              memory: 512Mi
+              cpu: 500m
             requests:
-              memory: 1G
-              cpu: 100m  
+              memory: 128Mi
+              cpu: 50m
       dnsConfig:
         nameservers:
           - 1.1.1.1
