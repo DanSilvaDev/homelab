@@ -73,3 +73,18 @@ Finalidade: armazenamento geral, mídias (Jellyfin/Plex) e backups
 | `vm_k3s_worker_2` | ver [clusters/worker2/config.md](../worker2/config.md) |
 
 Observação: este host hospeda apenas 1 VM — sem disputa de GPU ou de disco zvol com outras VMs.
+
+## Próximos passos
+
+- [ ] **Consolidar `ssd-apps` em mirror de 2x 1TB** (capacidade + redundância, sem comprar hardware além de 1 SSD novo):
+  1. Comprar um SSD de 1TB novo.
+  2. Mover o SSD de 1TB hoje instalado no control-plane (usado só ~80GB) para o TrueNAS.
+  3. Reaproveitar o SSD de 120GB (hoje disco único do `ssd-apps`) como disco do control-plane — sobra de espaço de sobra para o uso atual (~80GB).
+  4. No TrueNAS, migrar o pool sem recriar datasets/zvols (preserva `vm-k3s-disk`, `fast-data`, `databases`, `k8s` nos mesmos caminhos):
+     ```
+     zpool attach ssd-apps <disco-120GB-atual> <novo-1TB>      # converte em mirror (ainda 120GB úteis)
+     zpool replace ssd-apps <disco-120GB> <segundo-1TB-do-control-plane>   # troca o membro de 120GB
+     # autoexpand (automático no TrueNAS, ou `zpool online -e`) -> pool cresce pra ~1TB útil, mirror 2x1TB
+     ```
+  - **Risco crítico, cuidado redobrado**: o control-plane é hoje o **único nó com etcd** do cluster (sem HA de etcd — o Kube-VIP só dá IP estável pra API, não replica o etcd). Trocar o disco dele exige snapshot/backup do etcd (`k3s etcd-snapshot save` ou equivalente) **antes** de qualquer coisa, e um clone de disco (não reinstalação do zero) pra preservar a instalação exata do k3s.
+- [ ] **Planejar backup em nuvem do TrueNAS** — hoje não existe nenhuma cópia dos dados fora do host físico; numa catástrofe (incêndio, roubo, falha simultânea de disco), os dois pools ZFS (`ssd-apps`, `data`) e tudo que depende deles (PVs dinâmicos do cluster, futura biblioteca de mídia, VM do worker2) seriam perdidos sem recuperação. Avaliar: destino (ex: Backblaze B2, AWS S3 Glacier, outro provedor compatível com `rclone`/replicação nativa do TrueNAS), escopo (que datasets realmente precisam de backup externo — provavelmente não o `k8s` de PVs recriáveis, mas sim `Backups`, `databases`, e dados irrecriáveis), frequência/retenção e custo estimado de armazenamento+egress.

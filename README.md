@@ -32,6 +32,7 @@ clusters/                  Configuração e estado dos nós do cluster
   control_plane_1/           Reservado para manifestos/config do nó control-plane
   kube-vip/                  Manifestos do Kube-VIP (HA do control-plane + LoadBalancer L2/ARP)
   observability/config.md    Estado da stack de monitoring/logging: Prometheus, Grafana, Alertmanager, storage NFS
+  media-stack/plan.md        Planejamento da stack de mídia (Jellyfin + *arr) - ainda não implantada
   truenas/config.md          Estado completo do host TrueNAS: hardware, BIOS, pools e datasets ZFS
   worker2/config.md          Estado completo da VM worker2: hardware, SO, driver GPU, histórico de comandos
 
@@ -96,6 +97,7 @@ clusters/                  Configuration and state of the cluster nodes
   control_plane_1/           Reserved for control-plane node manifests/config
   kube-vip/                  Kube-VIP manifests (control-plane HA + L2/ARP LoadBalancer)
   observability/config.md    State of the monitoring/logging stack: Prometheus, Grafana, Alertmanager, NFS storage
+  media-stack/plan.md        Media stack (Jellyfin + *arr) deployment plan - not yet implemented
   truenas/config.md          Full state of the TrueNAS host: hardware, BIOS, ZFS pools and datasets
   worker2/config.md          Full state of the worker2 VM: hardware, OS, GPU driver, command history
 
