@@ -1,0 +1,42 @@
+# Template de pod temporario para migrar dados de um PV `local` (hostPath, preso a um
+# node) para um PVC dinamico (ex: NFS do TrueNAS). Usado originalmente para migrar o
+# Pi-hole de local-storage/worker1 para truenas-nfs-ssd (ver git history/PR para contexto).
+#
+# Para reusar: ajuste os 4 campos abaixo (nome do pod, node de origem, path do hostPath
+# e nome do PVC de destino), aplique com `kubectl apply -f`, acompanhe com `kubectl logs
+# -f` ate aparecer "MIGRATION_DONE", valide com `diff -rq /source /dest` dentro do pod,
+# e so entao delete o pod (`kubectl delete pod <nome> -n <namespace>`).
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pihole-data-migration
+  namespace: default
+spec:
+  restartPolicy: Never
+  nodeSelector:
+    kubernetes.io/hostname: worker1
+  containers:
+    - name: migrate
+      image: alpine:3.20
+      command: ["sh", "-c", "cp -a /source/. /dest/ && echo MIGRATION_DONE && sleep 3600"]
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi
+      volumeMounts:
+        - name: source
+          mountPath: /source
+          readOnly: true
+        - name: dest
+          mountPath: /dest
+  volumes:
+    - name: source
+      hostPath:
+        path: /home/kubecluster/cluster-storage/pihole
+        type: Directory
+    - name: dest
+      persistentVolumeClaim:
+        claimName: pihole-pvc

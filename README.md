@@ -22,10 +22,11 @@ Guarda os manifestos, configurações de infraestrutura e a documentação de es
 
 ```
 apps/                      Manifestos de aplicações rodando no cluster
-  pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, API gateway
+  pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, config
   ntfy/                      ntfy self-hosted (push notifications) - deployment, service, PVC
   gpu-test/                  Pod de teste usado para validar alocação de GPU (benchmark CUDA)
   grafana/alerts/            Export versionado de regras de alerta nativas do Grafana (backup, não aplicado automaticamente)
+  helpers/                   Templates de pods temporários reutilizáveis (ex: migração de dados entre storage)
 
 clusters/                  Configuração e estado dos nós do cluster
   control_plane_1/           Reservado para manifestos/config do nó control-plane
@@ -85,10 +86,11 @@ It holds the manifests, infrastructure configuration, and state/diagnostic docum
 
 ```
 apps/                      Application manifests running on the cluster
-  pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, API gateway
+  pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, config
   ntfy/                      Self-hosted ntfy (push notifications) - deployment, service, PVC
   gpu-test/                  Test pod used to validate GPU allocation (CUDA benchmark)
   grafana/alerts/            Versioned export of native Grafana alert rules (backup, not auto-applied)
+  helpers/                   Reusable temporary pod templates (e.g. data migration between storage backends)
 
 clusters/                  Configuration and state of the cluster nodes
   control_plane_1/           Reserved for control-plane node manifests/config
