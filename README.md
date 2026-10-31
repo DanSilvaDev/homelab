@@ -23,6 +23,7 @@ Guarda os manifestos, configurações de infraestrutura e a documentação de es
 ```
 apps/                      Manifestos de aplicações rodando no cluster
   pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, config
+  core-dns/                  CoreDNS - fallback de DNS que assume o IP do Pi-hole via Kube-VIP quando ele fica indisponível (ver "Gerenciamento de energia" abaixo)
   ntfy/                      ntfy self-hosted (push notifications) - deployment, service, PVC
   gpu-test/                  Pod de teste usado para validar alocação de GPU (benchmark CUDA)
   grafana/alerts/            Export versionado de regras de alerta nativas do Grafana (backup, não aplicado automaticamente)
@@ -62,6 +63,12 @@ ia/                        Contexto e ferramentas para agentes de IA trabalharem
 - **`troubleshooting/*.md`**: documentam **problemas já resolvidos** (sintomas → causa raiz → diagnóstico → correção → lições aprendidas), para evitar re-investigar o mesmo problema no futuro.
 - **`ia/`**: ponto de entrada de contexto para agentes de IA (Claude ou outros) que forem trabalhar neste repo — comece por `ia/CLAUDE.md`.
 
+### Gerenciamento de energia
+
+Os servidores worker (worker1, worker2) **e também o host TrueNAS** serão desligados durante a madrugada para economizar energia — o control-plane permanece ligado 24/7 (hospeda o Kube-VIP e a API do cluster). O Pi-hole tem anti-afinidade explícita com o control-plane (ver `apps/pihole/deployment.yaml`): como seu PVC é servido via NFS pelo TrueNAS, ele ficaria inutilizável de qualquer forma com o TrueNAS desligado, então não faz sentido deixá-lo rodar no control-plane só pra ficar travado esperando o storage voltar — ele simplesmente fica indisponível junto com os workers. Para a rede doméstica não perder resolução de DNS nesse período, o **coredns-bypass** (`apps/core-dns/`) roda permanentemente no control-plane como fallback: ele assume o mesmo IP flutuante do Kube-VIP (`192.168.3.200`) sempre que o Pi-hole fica `NotReady` (via `readinessProbe` na porta de DNS), oferecendo resolução básica (sem ad-blocking, encaminhando direto pra Cloudflare) até os workers e o TrueNAS voltarem a ligar.
+
+A automação do ciclo de desligar/religar os workers via **Ansible** está planejada, mas ainda não implementada.
+
 ### Status
 
 Em evolução contínua — próximos passos e detalhes de cada componente estão documentados nos respectivos `config.md` dentro de `clusters/`.
@@ -87,6 +94,7 @@ It holds the manifests, infrastructure configuration, and state/diagnostic docum
 ```
 apps/                      Application manifests running on the cluster
   pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, config
+  core-dns/                  CoreDNS - DNS fallback that takes over Pi-hole's Kube-VIP IP when it's unavailable (see "Power management" below)
   ntfy/                      Self-hosted ntfy (push notifications) - deployment, service, PVC
   gpu-test/                  Test pod used to validate GPU allocation (CUDA benchmark)
   grafana/alerts/            Versioned export of native Grafana alert rules (backup, not auto-applied)
@@ -125,6 +133,12 @@ ia/                        Context and tooling for AI agents working in this rep
 - **`clusters/*/config.md`**: document the **current state** of each node/host (hardware, configuration, versions, executed command log). Updated incrementally as the environment changes — they are the most up-to-date source of truth for each component.
 - **`troubleshooting/*.md`**: document **already-resolved issues** (symptoms → root cause → diagnosis → fix → lessons learned), to avoid re-investigating the same problem in the future.
 - **`ia/`**: entry point for AI agent context (Claude or others) working on this repo — start with `ia/CLAUDE.md`.
+
+### Power management
+
+The worker servers (worker1, worker2) **and the TrueNAS host** will be shut down overnight to save power — the control-plane stays on 24/7 (it hosts Kube-VIP and the cluster API). Pi-hole has explicit anti-affinity against the control-plane (see `apps/pihole/deployment.yaml`): since its PVC is served over NFS by TrueNAS, it would be unusable anyway once TrueNAS is off, so there's no point letting it run on the control-plane just to sit stuck waiting on storage that isn't there — it simply goes down along with the workers. To keep DNS resolution working for the home network during that window, **coredns-bypass** (`apps/core-dns/`) runs permanently on the control-plane as a fallback: it takes over the same Kube-VIP floating IP (`192.168.3.200`) whenever Pi-hole goes `NotReady` (via a `readinessProbe` on the DNS port), providing basic resolution (no ad-blocking, forwarded straight to Cloudflare) until the workers and TrueNAS power back on.
+
+Automating the worker shutdown/startup cycle via **Ansible** is planned but not yet implemented.
 
 ### Status
 
