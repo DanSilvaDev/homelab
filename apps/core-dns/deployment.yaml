@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coredns-bypass
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coredns-bypass
+  template:
+    metadata:
+      labels:
+        app: coredns-bypass
+        server: dns-provider # Veja core-dns/service.yaml: label compartilhada com o pi-hole
+    spec:
+      # Aplica a prioridade mais baixa para dar preferência ao Pi-hole quando ele ligar
+      priorityClassName: dns-bypass-priority 
+      
+      # Garante que o Pod só rode no Notebook (Control Plane).
+      # nodeSelector exige igualdade exata de valor; como o valor real do
+      # label não é garantidamente "" (ex: k3s/kubeadm usam "true"), usamos
+      # nodeAffinity com Exists, igual ao padrão do kube-vip-ds (clusters/kube-vip/arp.yaml).
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+
+      # Permite o Pod ignorar a restrição padrão que impede Pods comuns de rodarem no Control Plane
+      tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
+        effect: "NoSchedule"
+        
+      containers:
+      - name: coredns
+        image: coredns/coredns:1.11.1 # Imagem oficial e leve do CoreDNS
+        imagePullPolicy: IfNotPresent
+        args: [ "-conf", "/etc/coredns/Corefile" ]
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/coredns
+          readOnly: true
+        ports:
+        - containerPort: 53
+          name: dns
+          protocol: UDP
+        - containerPort: 53
+          name: dns-tcp
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8181
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+          successThreshold: 1
+        resources:
+            #Core-dns should consume very low resources
+            limits:
+              memory: 256Mi
+              cpu: 500m
+            requests:
+              memory: 128Mi
+              cpu: 50m  
+      volumes:
+        - name: config-volume
+          configMap:
+            name: coredns-bypass-config
+            items:
+            - key: Corefile
+              path: Corefile

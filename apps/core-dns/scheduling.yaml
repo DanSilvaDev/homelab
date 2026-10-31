@@ -1,0 +1,17 @@
+# 1. Criar a prioridade para o Pi-hole principal (Alta)
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: pihole-principal-priority
+value: 1000000
+globalDefault: false
+description: "Prioridade para o Pi-hole principal nos Workers"
+---
+# 2. Criar a prioridade para o Bypass (Baixa)
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: dns-bypass-priority
+value: 500000
+globalDefault: false
+description: "Prioridade para o DNS de reserva no Control Plane"
