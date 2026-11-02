@@ -100,6 +100,28 @@ spec:
               value: "192.168.3.0/24"
             - name: TZ
               value: "America/Sao_Paulo"
+            # BLOCK_MALICIOUS=off: o Pi-hole já bloqueia anúncios/malware na
+            # rede, então essa camada duplicada do gluetun (que baixa listas
+            # pela própria VPN no boot) não é necessária aqui. Testado e
+            # descartado como causa isolada do loop de restart abaixo, mas
+            # mantido off por não ter motivo pra manter ligado.
+            - name: BLOCK_MALICIOUS
+              value: "off"
+            # Causa real do loop infinito de restart do VPN (mesmo com o
+            # servidor/chave corretos do fix acima): o alvo padrão do
+            # healthcheck usa hostnames (github.com/cloudflare.com), e esse
+            # lookup consistentemente falhava dentro da janela curta do
+            # healthcheck logo após cada restart "frio" do túnel - apesar de
+            # testes manuais (ping, nslookup via 127.0.0.1, wget) terem
+            # confirmado repetidamente que a VPN e o DNS funcionavam de
+            # verdade. Falso-negativo do healthcheck nesse ambiente
+            # específico, não conectividade real quebrada (ver troubleshooting
+            # doc da Fase 4 pra todo o processo de eliminação - CPU throttling
+            # e upstream DNS "plain" foram testados e descartados antes
+            # disso). Trocar o alvo pra um IP fixo (sem lookup de hostname)
+            # resolveu definitivamente - 0 restarts desde então.
+            - name: HEALTH_TARGET_ADDRESSES
+              value: "1.1.1.1:443"
           securityContext:
             capabilities:
               add: ["NET_ADMIN"]
@@ -107,11 +129,18 @@ spec:
             - name: dev-net-tun
               mountPath: /dev/net/tun
           resources:
+            # limits.cpu subido de 250m pra 1: testado como hipótese pro loop
+            # de restart (gluetun reconstrói firewall + handshake + DNS-over-TLS
+            # + MTU a cada ciclo, e vários timeouts simultâneos - iptables-restore,
+            # TLS, DNS - sugeriam throttling), mas sozinho não resolveu (ver
+            # HEALTH_TARGET_ADDRESSES abaixo pra causa real). Mantido mais alto
+            # mesmo assim, como folga razoável pro trabalho de criptografia
+            # WireGuard + reconstrução de firewall do gluetun.
             requests:
-              cpu: 50m
+              cpu: 100m
               memory: 64Mi
             limits:
-              cpu: 250m
+              cpu: "1"
               memory: 128Mi
         - name: qbittorrent
           image: lscr.io/linuxserver/qbittorrent:latest
