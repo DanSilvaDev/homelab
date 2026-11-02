@@ -1,0 +1,36 @@
+# Template de pod temporario para validar acesso NFS a um export do TrueNAS
+# sem precisar criar um PV/PVC definitivo antes. Usado originalmente pra
+# confirmar que o export restrito de data/midias (ver clusters/truenas/config.md)
+# estava liberado pros 3 nodes do cluster.
+#
+# Para reusar: ajuste `server`/`path` do volume NFS, aplique com `kubectl apply -f`,
+# valide com `kubectl exec nfs-midias-check -- ls -la /mnt` e delete o pod depois
+# (`kubectl delete pod nfs-midias-check`). No Windows/Git Bash, prefixe comandos
+# com path Unix (`/mnt`) com `MSYS_NO_PATHCONV=1` pra evitar a conversao automatica
+# de path do MSYS.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nfs-midias-check
+  namespace: default
+spec:
+  restartPolicy: Never
+  containers:
+    - name: check
+      image: alpine:3.20
+      command: ["sh", "-c", "ls -la /mnt && sleep 300"]
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          cpu: 100m
+          memory: 64Mi
+      volumeMounts:
+        - name: midias
+          mountPath: /mnt
+  volumes:
+    - name: midias
+      nfs:
+        server: 192.168.3.103
+        path: /mnt/data/midias

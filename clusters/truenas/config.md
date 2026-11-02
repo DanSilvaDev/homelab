@@ -59,7 +59,7 @@ Finalidade: armazenamento geral, mídias (Jellyfin/Plex) e backups
 
 | Nome | Compressão | Observação |
 |---|---|---|
-| `Midias` | off / lz4 | — |
+| `midias` | off / lz4 | **Biblioteca da media stack (Jellyfin + \*arr)**: `recordsize` 1M (ajustado em 2026-11-02 para arquivos de vídeo grandes/sequenciais), export NFS restrito aos 3 nodes do cluster (`192.168.3.101/102/105`, `rw` — antes aberto para `*`), sem quota. Estrutura de pastas: `movies/`, `tv/`, `music/`, `books/`, `downloads/`. Ver [plano da media stack](../media-stack/plan.md). |
 | `Backups` | ZSTD | Split futuro planejado em sub-datasets por fonte (ex. `smb-pc`, `nfs-k3s`) para retenção/quota independentes |
 | `k8s` | LZ4 | Export NFS (quota 100GiB) para PVs dinâmicos do cluster k3s via `nfs-subdir-external-provisioner` (StorageClass `truenas-nfs-hdd`), para dados que não exigem I/O de SSD. Hosts autorizados: `192.168.3.101`, `192.168.3.102`, `192.168.3.105` |
 

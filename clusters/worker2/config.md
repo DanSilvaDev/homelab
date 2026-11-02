@@ -36,7 +36,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 
 | Nome | Compressão | Observação |
 |---|---|---|
-| `Midias` | off / lz4 | Armazenamento geral/mídias |
+| `midias` | off / lz4 | Biblioteca da media stack (Jellyfin + \*arr) — ver [TrueNAS - config.md](../truenas/config.md) |
 | `Backups` | ZSTD | Split futuro planejado em sub-datasets por fonte (ex. `smb-pc`, `nfs-k3s`) |
 
 ## VM worker2

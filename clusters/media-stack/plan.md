@@ -33,18 +33,7 @@ Hoje `nvidia.com/gpu: 1/1` já está 100% alocado pelo `dcgm-exporter`, mesmo el
 ## Arquitetura de storage
 
 ### TrueNAS — dataset `data/midias`
-- Mudar `recordsize` de 128K (padrão atual) para **1M** (melhor para arquivos de vídeo grandes/sequenciais) — fazer **antes** de qualquer dado ser escrito.
-- Restringir o export NFS aos 3 nodes do cluster (`192.168.3.101/102/105`, `rw`) — hoje está aberto para `*` (qualquer host).
-- Sem quota por enquanto (899G disponíveis no pool; dataset vazio hoje).
-- Estrutura de pastas:
-  ```
-  data/midias/
-    movies/
-    tv/
-    music/
-    books/
-    downloads/
-  ```
+**Feito (2026-11-02)** — `recordsize` 1M, export NFS restrito aos 3 nodes do cluster, e estrutura de pastas criada. Detalhes promovidos para [TrueNAS - config.md](../truenas/config.md).
 
 ### PV estático (não dinâmico) apontando para `data/midias`
 Motivo: precisamos de um caminho previsível e compartilhado entre vários apps (não uma subpasta com nome auto-gerado por app, como faz o provisionamento dinâmico via `nfs-subdir-external-provisioner`). Isso também é pré-requisito para o *hardlink* funcionar entre `downloads/` e as pastas finais (`movies/`, `tv/`, etc.) — hardlink só funciona dentro do mesmo filesystem.
@@ -102,7 +91,7 @@ Isso deixa folga ampla (800GB+) mesmo somando os 9 configs novos da media stack 
 
 ## Fases propostas (uma PR por fase)
 
-1. **TrueNAS**: `recordsize` 1M, restringir export, estrutura de pastas (sem necessidade de ajustar quota do SSD — pool `ssd-apps` agora com 960GB, folga ampla mesmo com todos os configs lá).
+1. ~~**TrueNAS**: `recordsize` 1M, restringir export, estrutura de pastas~~ — ✅ **feito** (ver [TrueNAS - config.md](../truenas/config.md)).
 2. **GPU time-slicing** (libera GPU pro Jellyfin sem mexer no dcgm-exporter).
 3. **Jellyfin**.
 4. **qBittorrent + Gluetun + Unpackerr** (pipeline de download).
