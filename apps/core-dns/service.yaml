@@ -4,11 +4,21 @@ metadata:
   name: dns-service-lb
   namespace: default
   annotations:
-    # Mesmo endereço do pi-hole
-    kube-vip.io/loadbalancerIP: "192.168.3.200" 
+    # Único Service pedindo este IP ao Kube-VIP. Antes, pihole-svc (so HTTP)
+    # e este Service (so DNS) pediam o MESMO loadbalancerIP cada um no seu
+    # proprio objeto Service - o Kube-VIP nao divide um IP entre dois
+    # Services distintos: o segundo pedido e silenciosamente realocado pro
+    # proximo IP livre do pool (foi parar em .202, nao .200). Unificado num
+    # so Service (HTTP + DNS, mesmo selector) pra eliminar essa disputa.
+    # Ver troubleshooting/pihole_dns_wrong_loadbalancer_ip.md
+    kube-vip.io/loadbalancerIP: "192.168.3.200"
 spec:
   type: LoadBalancer
   ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 80
   - name: dns-udp
     port: 53
     protocol: UDP
@@ -19,5 +29,8 @@ spec:
     targetPort: 53
   selector:
     # IMPORTANTE: Esta label deve existir tanto no Pod do Pi-hole
-    # quanto no Pod do coredns-bypass para o Kube-VIP unificar o tráfego
+    # quanto no Pod do coredns-bypass para o Kube-VIP unificar o tráfego.
+    # A porta 80 so responde quando o pod ativo e o Pi-hole (coredns-bypass
+    # nao expoe HTTP) - aceitavel, a UI de admin nao precisa funcionar
+    # durante o failover de DNS.
     server: dns-provider
