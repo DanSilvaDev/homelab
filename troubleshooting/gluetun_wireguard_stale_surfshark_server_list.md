@@ -45,7 +45,7 @@ A investigação seguiu, nesta ordem:
 O usuário forneceu o bloco `[Peer]` do mesmo arquivo `.conf` que funcionou no Windows:
 ```ini
 [Peer]
-PublicKey = IFTVXxhLEqVgZI/JGOPRtmrNUQW1DNljeBe8Ys7v90A=
+PublicKey = SURFSHARK_SERVER_PUBLIC_KEY
 AllowedIPs = 0.0.0.0/0
 Endpoint = br-sao.prod.surfshark.com:51820
 ```
@@ -130,7 +130,7 @@ kubectl create secret generic gluetun-surfshark-credentials \
   --namespace media \
   --from-literal=wireguard-private-key='...' \
   --from-literal=wireguard-addresses='10.x.x.x/16' \
-  --from-literal=wireguard-public-key='IFTVXxhLEqVgZI/JGOPRtmrNUQW1DNljeBe8Ys7v90A=' \
+  --from-literal=wireguard-public-key='SURFSHARK_SERVER_PUBLIC_KEY' \
   --from-literal=wireguard-endpoint-ip='146.70.163.211'
 
 kubectl apply -f apps/qbittorrent/deployment.yaml
@@ -228,7 +228,7 @@ The investigation proceeded in this order:
 The user provided the `[Peer]` block from the same `.conf` file that worked on Windows:
 ```ini
 [Peer]
-PublicKey = IFTVXxhLEqVgZI/JGOPRtmrNUQW1DNljeBe8Ys7v90A=
+PublicKey = SURFSHARK_SERVER_PUBLIC_KEY
 AllowedIPs = 0.0.0.0/0
 Endpoint = br-sao.prod.surfshark.com:51820
 ```
@@ -313,7 +313,7 @@ kubectl create secret generic gluetun-surfshark-credentials \
   --namespace media \
   --from-literal=wireguard-private-key='...' \
   --from-literal=wireguard-addresses='10.x.x.x/16' \
-  --from-literal=wireguard-public-key='IFTVXxhLEqVgZI/JGOPRtmrNUQW1DNljeBe8Ys7v90A=' \
+  --from-literal=wireguard-public-key='SURFSHARK_SERVER_PUBLIC_KEY' \
   --from-literal=wireguard-endpoint-ip='146.70.163.211'
 
 kubectl apply -f apps/qbittorrent/deployment.yaml
