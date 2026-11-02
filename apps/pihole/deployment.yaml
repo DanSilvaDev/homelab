@@ -14,7 +14,18 @@ spec:
     metadata:
       labels:
         app: pihole-app
+        server: dns-provider # Veja core-dns/service.yaml: label compartilhada com o coredns-bypass
     spec:
+      priorityClassName: pihole-principal-priority # Veja core-dns/scheduling
+      # Garante que o Pi-hole nunca rode no control-plane (reservado para o
+      # coredns-bypass, ver core-dns/deployment.yaml) — oposto do Exists usado la.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
       volumes:
         - name: pihole-pv
           persistentVolumeClaim:
@@ -44,6 +55,17 @@ spec:
           volumeMounts:
             - name: pihole-pv
               mountPath: "/etc/pihole"
+          readinessProbe:
+            # Testa se o FTL esta realmente respondendo na porta de DNS.
+            # Sem isso, o pod fica "Ready" mesmo com o DNS fora do ar e o
+            # Service (ver core-dns/service.yaml) nunca faz failover pro coredns-bypass.
+            tcpSocket:
+              port: 93
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
           resources:
             # Uso real medido via `kubectl top pod`: 9-16m CPU / 81-136Mi memoria.
             # Limits com margem para picos (atualizacao do gravity.db, rajadas de consulta).

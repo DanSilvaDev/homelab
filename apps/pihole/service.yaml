@@ -5,8 +5,9 @@ metadata:
   labels:
     app: pihole-app
   annotations:
-    # ESTA LINHA DIZ AO KUBE-VIP PARA ARRANCAR UM IP DO POOL GLOBAL
-    kube-vip.io/ipam: "true"
+    # IP fixo (nao mais via IPAM) para poder ser compartilhado com o dns-service-lb
+    # (ver apps/core-dns/service.yaml) sem depender da ordem de alocacao do pool.
+    kube-vip.io/loadbalancerIP: "192.168.3.200"
 spec:
   selector:
     app: pihole-app
@@ -16,11 +17,3 @@ spec:
     name: http
     port: 80
     targetPort: 80
-  - protocol: TCP
-    name: dns-tcp
-    port: 53
-    targetPort: 93
-  - protocol: UDP
-    name: dns-udp
-    port: 53
-    targetPort: 93

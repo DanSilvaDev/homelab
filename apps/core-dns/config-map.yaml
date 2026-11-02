@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-bypass-config
+  namespace: default # mudar para networking no futuro junto com pi-hole
+data:
+  Corefile: |
+    .:53 {
+        errors          # Ativa o relatório de erros
+        health          # Ativa o endpoint de health check para o Kubernetes (/health)
+        ready           # Ativa o plugin de prontidão para o readiness probe
+        log             # Registra as consultas no terminal (bom para debug)
+        reload          # Permite recarregar o arquivo se você alterá-lo sem reiniciar o Pod
+        
+        # O ENCAMINHAMENTO REAL:
+        # Tudo o que não for interno do cluster é enviado para a Cloudflare
+        forward . 1.1.1.1 1.1.1.2 {
+            max_concurrent 1000
+        }
+        
+        cache 30        # Guarda as respostas em cache por 30 segundos para economizar banda
+    }
