@@ -133,6 +133,16 @@ O chart Helm `nvdp/nvidia-device-plugin` exige, além do `nodeSelector` customiz
 - `feature.node.kubernetes.io/cpu-model.vendor_id=NVIDIA`
 - `nvidia.com/gpu.present=true` ← label escolhido manualmente (mais simples sem precisar instalar NFD/GPU Operator)
 
+### NVIDIA device plugin — time-slicing (2026-11-02)
+Habilitado `sharing.timeSlicing` com `replicas: 2` — sem isso, `nvidia.com/gpu: 1/1` já ficava 100% alocado só pelo `dcgm-exporter` (que usa só uma fração mínima da GPU de verdade, leitura de métricas via NVML/DCGM), e o modelo de device plugin do Kubernetes é tudo-ou-nada (sem "acesso de leitura parcial"). Agora o node anuncia **2 slots alocáveis** na mesma GPU física (confirmado via `kubectl describe node worker2 | grep -i "nvidia.com/gpu"` → `Capacity`/`Allocatable` = 2), liberando 1 slot pro Jellyfin sem mexer na config do `dcgm-exporter`. Values: `infrastructure/nvidia-device-plugin/values.yaml`. Aplicado via:
+```bash
+helm repo add nvdp https://nvidia.github.io/k8s-device-plugin
+helm repo update
+helm upgrade nvidia-device-plugin nvdp/nvidia-device-plugin \
+  --namespace nvidia-device-plugin \
+  -f infrastructure/nvidia-device-plugin/values.yaml
+```
+
 ### Nó no cluster
 - k3s version: `v1.36.5+k3s1` (igual ao control-plane; antes era requisito do Rancher, removido em 2026-10-28 — sem trava externa agora, mas mantido sem upgrade por ora)
 - Join confirmado via `kubectl get nodes` no control-plane

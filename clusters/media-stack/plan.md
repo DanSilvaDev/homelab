@@ -26,9 +26,9 @@ Fora de escopo por enquanto: FlareSolverr (só adicionar se algum indexer do Pro
   - **Confirmado via pesquisa (2026-10-27): Surfshark não suporta port forwarding.** O torrent funciona normalmente mesmo assim (não é pré-requisito), só com conectividade de entrada reduzida (menos peers conseguem abrir conexão direta com você — mais perceptível em trackers privados ou torrents com poucos seeds). Fontes: [VPNAlert](https://vpnalert.com/guides/surfshark-port-forwarding/), [VPNCentral](https://vpncentral.com/surfshark-vpn-review-2026-excellent-value-with-unlimited-device-connections/), [NatChecker](https://natchecker.com/blog/surfshark-port-forwarding).
 - **Imagens**: `linuxserver.io` para os apps `*arr`/qBittorrent (padrão de fato nesse ecossistema, já usamos o padrão de env vars `TZ`/`PUID`/`PGID` deles no Pi-hole), `jellyfin/jellyfin` oficial para o Jellyfin, `qmcgaw/gluetun` para a VPN.
 
-## Por que GPU precisa de ajuste (time-slicing)
+## GPU time-slicing
 
-Hoje `nvidia.com/gpu: 1/1` já está 100% alocado pelo `dcgm-exporter`, mesmo ele usando só uma fração mínima da GPU de verdade (só leitura de métricas via NVML/DCGM, nenhum trabalho pesado). O motivo: o modelo de *device plugin* do Kubernetes é tudo-ou-nada — não existe "acesso de leitura parcial" à GPU. Qualquer container que precise falar com o driver (seja só pra ler métricas, seja pra transcodificar) precisa declarar `resources.limits["nvidia.com/gpu"]`, e sem *time-slicing* o node só anuncia 1 unidade alocável (1 GPU física = 1 slot). Fix: habilitar `sharing.timeSlicing` no `nvidia-device-plugin` com `replicas: 2` (dcgm-exporter + Jellyfin), sem precisar tocar na config do dcgm-exporter.
+**Feito (2026-11-02)** — `sharing.timeSlicing` habilitado no `nvidia-device-plugin` com `replicas: 2` (dcgm-exporter + Jellyfin), sem mexer na config do `dcgm-exporter`. Detalhes e motivação completa promovidos para [Worker2 - config.md](../worker2/config.md).
 
 ## Arquitetura de storage
 
@@ -92,7 +92,7 @@ Isso deixa folga ampla (800GB+) mesmo somando os 9 configs novos da media stack 
 ## Fases propostas (uma PR por fase)
 
 1. ~~**TrueNAS**: `recordsize` 1M, restringir export, estrutura de pastas~~ — ✅ **feito** (ver [TrueNAS - config.md](../truenas/config.md)).
-2. **GPU time-slicing** (libera GPU pro Jellyfin sem mexer no dcgm-exporter).
+2. ~~**GPU time-slicing** (libera GPU pro Jellyfin sem mexer no dcgm-exporter)~~ — ✅ **feito** (ver [Worker2 - config.md](../worker2/config.md)).
 3. **Jellyfin**.
 4. **qBittorrent + Gluetun + Unpackerr** (pipeline de download).
 5. **Prowlarr + Sonarr + Radarr + Lidarr + Readarr + Bazarr** (núcleo *arr).
