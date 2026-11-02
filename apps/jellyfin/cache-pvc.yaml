@@ -1,0 +1,17 @@
+# Cache de transcodificação/thumbnails do Jellyfin - separado do config PVC por
+# recomendação oficial (docker-compose de referência do Jellyfin usa /config, /cache
+# e /media como 3 volumes distintos). Sem isso, /cache cai na camada gravável do
+# container (disco local do node) - o worker2 tem só 40GiB de zvol no total, sem
+# espaço livre suficiente pro Jellyfin nem iniciar (startup check exige 2GiB livres).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jellyfin-cache-pvc
+  namespace: media
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: truenas-nfs-ssd
+  resources:
+    requests:
+      storage: 10Gi

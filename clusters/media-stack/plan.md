@@ -48,7 +48,8 @@ Motivo: precisamos de um caminho previsível e compartilhado entre vários apps 
 
 | App | Tamanho sugerido | StorageClass recomendada |
 |---|---|---|
-| Jellyfin | 5Gi | `truenas-nfs-ssd` |
+| Jellyfin (config) | 5Gi | `truenas-nfs-ssd` |
+| Jellyfin (cache) | 10Gi | `truenas-nfs-ssd` — descoberto durante a implantação (Fase 3): Jellyfin exige `/cache` como volume separado de `/config`, não estava no plano original |
 | Prowlarr | ~1Gi | `truenas-nfs-ssd` |
 | Sonarr | ~1Gi | `truenas-nfs-ssd` |
 | Radarr | ~1Gi | `truenas-nfs-ssd` |
@@ -93,13 +94,15 @@ Isso deixa folga ampla (800GB+) mesmo somando os 9 configs novos da media stack 
 
 1. ~~**TrueNAS**: `recordsize` 1M, restringir export, estrutura de pastas~~ — ✅ **feito** (ver [TrueNAS - config.md](../truenas/config.md)).
 2. ~~**GPU time-slicing** (libera GPU pro Jellyfin sem mexer no dcgm-exporter)~~ — ✅ **feito** (ver [Worker2 - config.md](../worker2/config.md)).
-3. **Jellyfin**.
+3. ~~**Jellyfin**~~ — ✅ **feito** (2026-11-02): namespace `media`, PV/PVC estático pro `data/midias` (RO), PVCs de config e cache dedicados, GPU via time-slicing (`nvidia-smi` validado dentro do pod, GTX 970 visível), Service em `192.168.3.202`. Setup wizard concluído, hardware acceleration NVENC/NVDEC habilitado e biblioteca de mídia adicionada pelo usuário. Arquivos em `apps/jellyfin/`.
 4. **qBittorrent + Gluetun + Unpackerr** (pipeline de download).
 5. **Prowlarr + Sonarr + Radarr + Lidarr + Readarr + Bazarr** (núcleo *arr).
 6. **Jellyseerr + Recyclarr** (camada de conveniência por cima).
 
 ## Pendências / decisões ainda em aberto
 
+- ⚠️ **Resolver ao final da sessão**: registro `jellyfin.home` → `192.168.3.202` criado no Pi-hole (Local DNS Records), mas a resolução não está funcionando na prática — acesso direto por IP (`http://192.168.3.202`) funciona normalmente, mas qualquer serviço/cliente que tenta acessar via o nome DNS falha. Precisa investigar (suspeitas a checar: propagação/cache do Pi-hole, se o domínio `.home` está realmente caindo no Pi-hole e não sendo resolvido por outro DNS upstream primeiro, TTL de cache do cliente, erro de digitação no registro). Mesma classe de componente que já teve o incidente documentado em [troubleshooting/pihole_dns_wrong_loadbalancer_ip.md](../../troubleshooting/pihole_dns_wrong_loadbalancer_ip.md) — vale revisar esse doc antes de investigar do zero.
+- ⚠️ **Resolver ao final da sessão**: zvol `vm-k3s-disk` (disco da VM worker2) foi ampliado de 40GiB para 50GiB no TrueNAS, mas o Linux dentro da VM ainda não reconhece o espaço novo (partição/filesystem não cresceram). Comandos sugeridos e ainda não executados: `df -h /`, `lsblk`, `sudo growpart /dev/vda 1`, `sudo resize2fs /dev/vda1` (confirmar nomes de device reais antes de rodar).
 - Credenciais WireGuard da Surfshark para o Gluetun (Secret, criado manualmente via `kubectl create secret`, nunca commitado).
 - Conectar API keys entre os apps `*arr` (cada um gera a própria no primeiro boot — configuração manual via UI, não dá pra automatizar antecipadamente).
 - Config do Recyclarr (ConfigMap para perfis de qualidade + Secret para as API keys que ele consome).
