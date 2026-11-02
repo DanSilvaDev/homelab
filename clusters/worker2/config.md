@@ -48,13 +48,14 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 - Distro: Ubuntu Server 26.04.1
 - Variante de instalação: Minimized
 - Hostname: `worker2`
-- Kernel: 7.0.0-38-generic
+- Kernel: 7.0.0-42-generic (atualizado via `apt upgrade` em 2026-11-02; ver observação sobre módulo NVIDIA abaixo)
 - IP: `192.168.3.105/24` (DHCP + reserva por MAC no roteador — sem IP estático configurado na VM, por decisão deliberada)
 - Acesso SSH: por chave Ed25519 (`~/.ssh/id_ed25519_homelab` no host administrador), `PasswordAuthentication no`
 - Driver GPU: `nvidia-driver-580-server`
   - Versão instalada: `580.178.04` (confirmado via `nvidia-smi`)
   - Observação: branch 580 é a última com suporte a GPUs Maxwell (GTX 970/GM204); evitar upgrade para branch 590+
   - Todos os pacotes relacionados (`libnvidia-*-580-server`, `nvidia-driver-580-server`, `nvidia-kernel-*-580-server`, etc.) travados com `apt-mark hold`
+  - **Atenção**: esse hold também trava os pacotes de módulo de kernel versionados por ABI (`linux-modules-nvidia-580-server-<kernel>`, `linux-modules-nvidia-580-server-generic`). Como o kernel do host (`linux-image-generic`) não está em hold, qualquer `apt upgrade` que traga kernel novo deixa a GPU sem módulo carregável até o pacote `linux-modules-nvidia-580-server-$(uname -r)` correspondente ser instalado manualmente (mesma branch 580, sem pular pra 590+). **Checar isso antes de reiniciar a VM depois de qualquer `apt upgrade`.** Incidente documentado em [troubleshooting/worker2_nvidia_module_missing_after_kernel_upgrade.md](../../troubleshooting/worker2_nvidia_module_missing_after_kernel_upgrade.md).
 - NVIDIA Container Toolkit: `1.20.1` instalado
 
 ### CPU
@@ -203,4 +204,11 @@ kubectl describe node worker2 | grep -i "gpu"   # confirmado: nvidia.com/gpu em 
 kubectl apply -f gpu-test.yaml                  # pod CUDA n-body benchmark
 kubectl logs gpu-test                           # confirmado: 2550.474 GFLOP/s na GTX 970
 kubectl delete pod gpu-test test-gpu-selector   # limpeza dos pods de teste
+
+# Incidente 2026-11-02: módulo NVIDIA ausente após apt upgrade trazer kernel novo (7.0.0-38 -> 7.0.0-42)
+# Detalhes completos: troubleshooting/worker2_nvidia_module_missing_after_kernel_upgrade.md
+sudo apt install -y linux-modules-nvidia-580-server-7.0.0-42-generic linux-objects-nvidia-580-server-7.0.0-42-generic
+sudo depmod -a
+sudo modprobe nvidia
+nvidia-smi   # confirmado: driver 580.178.04 recarregado, GTX 970 reconhecida
 ```
