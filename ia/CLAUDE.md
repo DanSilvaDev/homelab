@@ -43,6 +43,7 @@ Antes de propor mudanças de infraestrutura, **sempre leia primeiro** `clusters/
 2. **Documentação de troubleshooting** (`troubleshooting/*.md`): post-mortems de problemas não-óbvios já resolvidos, seguindo uma estrutura fixa (cenário/sintomas → investigação/causa raiz → comandos de diagnóstico → correção → lições aprendidas). Ver a skill `create-troubleshooting-doc` em `ia/skills/` para o template exato e quando usá-la.
 3. **Versões de k3s**: sem o Rancher, não há mais trava externa de minor version — mas ainda confirme compatibilidade (chart versions, drivers) antes de sugerir upgrades.
 4. **Branch de driver NVIDIA**: a GTX 970 (Maxwell) só é suportada até a branch `580` do driver NVIDIA — não sugerir upgrade para branches `590+` nesse hardware.
+5. **Manter os nodes limpos/neutros**: o objetivo é manter os nodes do cluster o mais parecidos possível entre si, com o mínimo de diferenças — só o que é realmente necessário pro funcionamento correto fica instalado permanentemente. Quando um pacote for instalado num node (via `apt install` ou similar) só para ajudar a diagnosticar um problema (ex: `conntrack`, `tcpdump`), ao final da investigação — quando a causa raiz for encontrada e resolvida — liste explicitamente quais pacotes foram instalados e em quais nodes, e sugira a desinstalação deles. A decisão de manter ou remover é sempre do operador (nunca desinstalar automaticamente sem confirmação), mas a sugestão deve ser feita proativamente, não só se perguntado.
 
 ## Gerenciamento de energia (em andamento)
 
