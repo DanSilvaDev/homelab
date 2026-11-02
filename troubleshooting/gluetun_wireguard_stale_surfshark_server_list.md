@@ -17,7 +17,7 @@ Deployment com 2 containers no mesmo pod (`gluetun` + `qbittorrent`, network nam
 #### Sintomas do Erro:
 * Log do Gluetun dizia `wireguard setup is complete`, mas minutos depois: `restarting VPN because it failed to pass the healthcheck: startup check: all check tries failed: parallel attempt 1/2 failed: dialing: dial tcp4: lookup github.com: i/o timeout, parallel attempt 2/2 failed: dialing: dial tcp4: lookup cloudflare.com: i/o timeout`.
 * O ciclo se repetia indefinidamente a cada ~10 segundos, sem nunca estabilizar.
-* O Gluetun alternava entre dois IPs de servidor resolvidos para `SERVER_COUNTRIES=Brazil` (`146.70.163.205` e `193.19.205.93`), com o mesmo resultado em ambos.
+* O Gluetun alternava entre dois IPs de servidor resolvidos para `SERVER_COUNTRIES=Brazil` (`<ip-auto-A>` e `<ip-auto-B>`), com o mesmo resultado em ambos.
 * Um teste de conectividade bruta por IP (`wget` para `1.1.1.1`, sem nome de domínio) também falhava, descartando problema isolado de DNS.
 
 ---
@@ -47,9 +47,9 @@ O usuário forneceu o bloco `[Peer]` do mesmo arquivo `.conf` que funcionou no W
 [Peer]
 PublicKey = SURFSHARK_SERVER_PUBLIC_KEY
 AllowedIPs = 0.0.0.0/0
-Endpoint = br-sao.prod.surfshark.com:51820
+Endpoint = SURFSHARK_SERVER_HOSTNAME:51820
 ```
-Resolvendo esse hostname (`nslookup br-sao.prod.surfshark.com`), os IPs retornados foram `146.70.163.211` e `138.199.58.35` — diferentes dos IPs que o Gluetun vinha selecionando automaticamente via `SERVER_COUNTRIES=Brazil` (`146.70.163.205` e `193.19.205.93`).
+Resolvendo esse hostname (`nslookup SURFSHARK_SERVER_HOSTNAME`), os IPs retornados foram `<ip-resolvido-dns>` e `<ip-resolvido-dns-alt>` — diferentes dos IPs que o Gluetun vinha selecionando automaticamente via `SERVER_COUNTRIES=Brazil` (`<ip-auto-A>` e `<ip-auto-B>`).
 
 O Gluetun, com `VPN_SERVICE_PROVIDER=surfshark` + `SERVER_COUNTRIES`, usa uma lista de servidores embutida na própria imagem (mapeando localização → IP + chave pública esperada do servidor). Essa lista estava desatualizada/divergente da infraestrutura real da Surfshark para os servidores de São Paulo — o Gluetun tentava o handshake contra IPs que, mesmo respondendo a nível de rede (daí o `[ASSURED]` no `conntrack` — provavelmente um *cookie-reply*, resposta de baixo nível do protocolo usada para rate-limiting/anti-scanning), não tinham a chave pública que o Gluetun esperava, ou eram servidores diferentes/decomissionados. O cliente WireGuard no Windows usa o `Endpoint` (resolvido via DNS em tempo real) e a `PublicKey` exatos do `.conf` gerado na hora pelo painel da Surfshark — sempre atual.
 
@@ -105,7 +105,7 @@ sudo apt install -y conntrack
 sudo conntrack -L -p udp --dport 51820
 
 # Resolução do hostname do servidor (feito no Windows, fora do cluster)
-nslookup br-sao.prod.surfshark.com
+nslookup SURFSHARK_SERVER_HOSTNAME
 
 # Logs completos filtrados por termos-chave
 kubectl logs -n media deploy/qbittorrent-deployment -c gluetun --tail=200 | grep -iE "ipv6|error|firewall|fatal"
@@ -131,7 +131,7 @@ kubectl create secret generic gluetun-surfshark-credentials \
   --from-literal=wireguard-private-key='...' \
   --from-literal=wireguard-addresses='10.x.x.x/16' \
   --from-literal=wireguard-public-key='SURFSHARK_SERVER_PUBLIC_KEY' \
-  --from-literal=wireguard-endpoint-ip='146.70.163.211'
+  --from-literal=wireguard-endpoint-ip='<ip-resolvido-dns>'
 
 kubectl apply -f apps/qbittorrent/deployment.yaml
 kubectl rollout restart deployment/qbittorrent-deployment -n media
@@ -154,7 +154,7 @@ kubectl exec -n media deploy/qbittorrent-deployment -c gluetun -- ping -c 2 -W 3
 # resolveu e respondeu normalmente, 0% loss, ~117ms (latência extra esperada do túnel)
 
 kubectl exec -n media deploy/qbittorrent-deployment -c gluetun -- wget -qO- https://ipinfo.io/ip
-# 146.70.163.212 - confirmado IP de saída da Surfshark, não o IP residencial
+# <ip-saida-vpn> - confirmado IP de saída da Surfshark, não o IP residencial
 ```
 
 Depois do fix acima, o túnel funcionava de verdade mas o healthcheck interno continuava derrubando a VPN a cada ~10s (segunda causa raiz, ver seção 2). A correção definitiva foi trocar o alvo do healthcheck para um IP fixo, sem necessidade de resolver hostname:
@@ -200,7 +200,7 @@ Deployment with 2 containers in the same pod (`gluetun` + `qbittorrent`, shared 
 #### Error Symptoms:
 * Gluetun's log said `wireguard setup is complete`, but minutes later: `restarting VPN because it failed to pass the healthcheck: startup check: all check tries failed: parallel attempt 1/2 failed: dialing: dial tcp4: lookup github.com: i/o timeout, parallel attempt 2/2 failed: dialing: dial tcp4: lookup cloudflare.com: i/o timeout`.
 * The cycle repeated indefinitely every ~10 seconds, never stabilizing.
-* Gluetun alternated between two server IPs resolved for `SERVER_COUNTRIES=Brazil` (`146.70.163.205` and `193.19.205.93`), with the same result on both.
+* Gluetun alternated between two server IPs resolved for `SERVER_COUNTRIES=Brazil` (`<ip-auto-A>` and `<ip-auto-B>`), with the same result on both.
 * A raw IP connectivity test (`wget` to `1.1.1.1`, no hostname) also failed, ruling out an isolated DNS problem.
 
 ---
@@ -230,9 +230,9 @@ The user provided the `[Peer]` block from the same `.conf` file that worked on W
 [Peer]
 PublicKey = SURFSHARK_SERVER_PUBLIC_KEY
 AllowedIPs = 0.0.0.0/0
-Endpoint = br-sao.prod.surfshark.com:51820
+Endpoint = SURFSHARK_SERVER_HOSTNAME:51820
 ```
-Resolving that hostname (`nslookup br-sao.prod.surfshark.com`) returned `146.70.163.211` and `138.199.58.35` — different from the IPs Gluetun had been auto-selecting via `SERVER_COUNTRIES=Brazil` (`146.70.163.205` and `193.19.205.93`).
+Resolving that hostname (`nslookup SURFSHARK_SERVER_HOSTNAME`) returned `<ip-resolvido-dns>` and `<ip-resolvido-dns-alt>` — different from the IPs Gluetun had been auto-selecting via `SERVER_COUNTRIES=Brazil` (`<ip-auto-A>` and `<ip-auto-B>`).
 
 Gluetun, with `VPN_SERVICE_PROVIDER=surfshark` + `SERVER_COUNTRIES`, uses a server list embedded in the image itself (mapping location → server IP + expected public key). That list was stale/diverged from Surfshark's actual infrastructure for the São Paulo servers — Gluetun was attempting the handshake against IPs that, while responding at the network level (hence `[ASSURED]` in `conntrack` — likely a cookie-reply, a low-level protocol response used for rate-limiting/anti-scanning), did not have the public key Gluetun expected, or were different/decommissioned servers. The WireGuard client on Windows, by contrast, uses the `Endpoint` (resolved via live DNS) and `PublicKey` exactly as generated moments earlier by the Surfshark panel — always current.
 
@@ -288,7 +288,7 @@ sudo apt install -y conntrack
 sudo conntrack -L -p udp --dport 51820
 
 # Resolving the server hostname (done on Windows, outside the cluster)
-nslookup br-sao.prod.surfshark.com
+nslookup SURFSHARK_SERVER_HOSTNAME
 
 # Full logs filtered by key terms
 kubectl logs -n media deploy/qbittorrent-deployment -c gluetun --tail=200 | grep -iE "ipv6|error|firewall|fatal"
@@ -314,7 +314,7 @@ kubectl create secret generic gluetun-surfshark-credentials \
   --from-literal=wireguard-private-key='...' \
   --from-literal=wireguard-addresses='10.x.x.x/16' \
   --from-literal=wireguard-public-key='SURFSHARK_SERVER_PUBLIC_KEY' \
-  --from-literal=wireguard-endpoint-ip='146.70.163.211'
+  --from-literal=wireguard-endpoint-ip='<ip-resolvido-dns>'
 
 kubectl apply -f apps/qbittorrent/deployment.yaml
 kubectl rollout restart deployment/qbittorrent-deployment -n media
@@ -337,7 +337,7 @@ kubectl exec -n media deploy/qbittorrent-deployment -c gluetun -- ping -c 2 -W 3
 # resolved and responded normally, 0% loss, ~117ms (extra latency expected from the tunnel)
 
 kubectl exec -n media deploy/qbittorrent-deployment -c gluetun -- wget -qO- https://ipinfo.io/ip
-# 146.70.163.212 - confirmed Surfshark egress IP, not the residential one
+# <ip-saida-vpn> - confirmed Surfshark egress IP, not the residential one
 ```
 
 After the fix above, the tunnel genuinely worked but the internal healthcheck kept tearing the VPN down every ~10s (second root cause, see section 2). The definitive fix was switching the healthcheck's target to a fixed IP, with no hostname resolution needed:
