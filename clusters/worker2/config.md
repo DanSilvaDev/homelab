@@ -10,7 +10,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 ### Hardware
 - **CPU**: AMD FX-8350 (8 Cores, 8 Threads)
 - **Placa-mãe**: ASRock 990FX Extreme3
-- **Memória RAM**: 19GB DDR3 Non-ECC (valor corrigido em 2026-10-26; documentação anterior tinha 24GB por engano)
+- **Memória RAM**: 28GB DDR3 Non-ECC (+8GB instalados em 2026-11-02, totalizando 28GB; valor anterior de 19GB corrigido em 2026-10-26, documentação antes disso tinha 24GB por engano)
 - **GPU boot do host**: NVIDIA GeForce GT 210 (apenas para boot/console do TrueNAS)
 - **GPU passthrough**: NVIDIA GeForce GTX 970 (isolada via PCI passthrough, dedicada à VM worker2)
 
@@ -24,7 +24,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 
 ### Storage TrueNAS SCALE
 
-**Pool `ssd-apps`** (Stripe, SSD 120GB)
+**Pool `ssd-apps`** (Stripe, SSD 960GB — substituiu o SSD de 120GB em 2026-11-02; segundo SSD de 960GB para mirror previsto em breve)
 
 | Nome | Tipo | Tamanho/Recordsize | Compressão | Uso |
 |---|---|---|---|---|
@@ -32,7 +32,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 | `fast-data` | dataset | recordsize 128K | LZ4 | Storage rápido genérico (NFS), inclui pasta `os_images` com ISOs |
 | `databases` | dataset | recordsize 16K | LZ4 | Reservado para Postgres/Redis (recordsize ajustado ao page size) |
 
-**Pool `data`** (Stripe, HD WD Blue 1TB — upgrade futuro para IronWolf 4TB em Mirror)
+**Pool `data`** (Stripe, HD Seagate IronWolf 3TB — substituiu o WD Blue 1TB em 2026-11-02)
 
 | Nome | Compressão | Observação |
 |---|---|---|
@@ -64,7 +64,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 - CPU Mode: Host Model
 
 ### Memória
-- 10 GiB (reduzido de 12 GiB em 2026-10-26, após alertas de memory pressure no host TrueNAS — a RAM total do host é 19GB, não 24GB como documentado antes; 12 GiB alocados ao worker2 deixava pouca folga pro próprio TrueNAS + outros serviços. VM rebootada para aplicar.)
+- 12 GiB (aumentado de 10 GiB para 12 GiB em 2026-11-02, após o host TrueNAS receber +8GB de RAM, totalizando 28GB — folga suficiente agora pro TrueNAS + worker2. VM rebootada para aplicar. Histórico: reduzido de 12 GiB para 10 GiB em 2026-10-26 por alertas de memory pressure, quando o host tinha só 19GB.)
 
 ### Disco
 - Tipo: Existing zvol

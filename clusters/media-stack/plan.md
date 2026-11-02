@@ -59,32 +59,30 @@ Motivo: precisamos de um caminho previsível e compartilhado entre vários apps 
 
 | App | Tamanho sugerido | StorageClass recomendada |
 |---|---|---|
-| Jellyfin | 5Gi | `truenas-nfs-ssd` (único com motivo técnico real para SSD — ver seção abaixo) |
-| Prowlarr | ~1Gi | `truenas-nfs-hdd` |
-| Sonarr | ~1Gi | `truenas-nfs-hdd` |
-| Radarr | ~1Gi | `truenas-nfs-hdd` |
-| Lidarr | ~1Gi | `truenas-nfs-hdd` |
-| Readarr | ~1Gi | `truenas-nfs-hdd` |
-| Bazarr | ~1Gi | `truenas-nfs-hdd` |
-| Jellyseerr | ~1Gi | `truenas-nfs-hdd` |
-| qBittorrent | ~2Gi | `truenas-nfs-hdd` |
+| Jellyfin | 5Gi | `truenas-nfs-ssd` |
+| Prowlarr | ~1Gi | `truenas-nfs-ssd` |
+| Sonarr | ~1Gi | `truenas-nfs-ssd` |
+| Radarr | ~1Gi | `truenas-nfs-ssd` |
+| Lidarr | ~1Gi | `truenas-nfs-ssd` |
+| Readarr | ~1Gi | `truenas-nfs-ssd` |
+| Bazarr | ~1Gi | `truenas-nfs-ssd` |
+| Jellyseerr | ~1Gi | `truenas-nfs-ssd` |
+| qBittorrent | ~2Gi | `truenas-nfs-ssd` |
 
 Unpackerr e Recyclarr não precisam de PVC (stateless / config via ConfigMap+Secret).
 
 ## SSD vai precisar de upgrade?
 
-**Sim, em algum momento — mas não é bloqueante pra começar, se distribuirmos os configs como na tabela acima.**
+**Não mais — resolvido.** O SSD de 120GB foi substituído por um de 960GB em 2026-11-02 (via `zpool replace`, resilver concluído com sucesso). Um segundo SSD vem do control-plane para formar mirror no `ssd-apps` (redundância); o 120GB liberado vai para o control-plane. Ver [TrueNAS - config.md](../truenas/config.md) (seção "Próximos passos") para o plano dessa troca.
 
-Contas: o pool SSD físico tem **120GB** no total.
-- `vm-k3s-disk` (zvol, disco da VM worker2): **40 GiB fixos** (`sparse off` = totalmente pré-alocado, não é sob demanda).
-- Dataset `k8s`: quota atual 40GiB, já com ~27Gi declarados (Prometheus 20Gi + Alertmanager 2Gi + Grafana 5Gi).
-- `fast-data`/`databases`: sem quota fixa, mas já com uso real (ISOs, etc.).
+Contas atualizadas: pool `ssd-apps` agora com **960GB** no total.
+- `vm-k3s-disk` (zvol, disco da VM worker2): **40 GiB fixos**.
+- Dataset `k8s`: quota atual 40GiB, ~27Gi declarados (Prometheus 20Gi + Alertmanager 2Gi + Grafana 5Gi).
+- `fast-data`/`databases`: sem quota fixa, uso real baixo (ISOs, etc.).
 
-Isso já deixa pouca margem **antes** de qualquer coisa nova. Se colocássemos todos os 9 configs novos no SSD (plano original), precisaríamos subir a quota do `k8s` pra ~70GiB — e `70 + 40 (VM) = 110GB` de 120GB físicos deixaria só ~10GB de folga pro resto, perigosamente apertado (ZFS degrada e fica arriscado perto de 100% cheio).
+Isso deixa folga ampla (800GB+) mesmo somando os 9 configs novos da media stack (cada um pequeno, 1-5Gi) — **a divisão SSD/HDD por escassez de espaço não é mais necessária.**
 
-**Mitigação adotada no plano acima**: só o Jellyfin (SQLite + cache de thumbnails, acessado constantemente pela UI, concorrendo com streaming se estivesse no mesmo HD do acervo) fica no SSD. Os outros 8 apps têm bancos de configuração minúsculos e I/O bem mais leve — vão no HDD sem risco real. Isso adia a necessidade de comprar hardware novo.
-
-**Quando comprar**: conforme a biblioteca de mídia crescer, mais apps forem adicionados, ou normal uso cotidiano. Vale considerar um segundo SSD dedicado (hoje o `vm-k3s-disk` sozinho consome 1/3 do pool atual) em vez de só trocar por um maior, já que isolaria a VM do restante.
+**Decisão revisada**: todos os Config PVCs da media stack (Jellyfin, Prowlarr, Sonarr, Radarr, Lidarr, Readarr, Bazarr, Jellyseerr, qBittorrent) passam a usar `truenas-nfs-ssd`. Justificativa: sobra espaço de sobra, esses configs (SQLite de cada app) se beneficiam de latência menor, e quando o mirror do `ssd-apps` for concluído eles ganham redundância que o pool `data` (HDD, ainda stripe single-disk) não tem.
 
 ## Inventário de componentes
 
@@ -104,7 +102,7 @@ Isso já deixa pouca margem **antes** de qualquer coisa nova. Se colocássemos t
 
 ## Fases propostas (uma PR por fase)
 
-1. **TrueNAS**: `recordsize` 1M, restringir export, estrutura de pastas, (sem mudança de quota SSD agora — mitigado pela distribuição SSD/HDD acima).
+1. **TrueNAS**: `recordsize` 1M, restringir export, estrutura de pastas (sem necessidade de ajustar quota do SSD — pool `ssd-apps` agora com 960GB, folga ampla mesmo com todos os configs lá).
 2. **GPU time-slicing** (libera GPU pro Jellyfin sem mexer no dcgm-exporter).
 3. **Jellyfin**.
 4. **qBittorrent + Gluetun + Unpackerr** (pipeline de download).
