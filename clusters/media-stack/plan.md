@@ -24,7 +24,9 @@ Fora de escopo por enquanto: FlareSolverr (só adicionar se algum indexer do Pro
 - **GPU**: habilitar *time-slicing* no `nvidia-device-plugin` para liberar um slot de GPU pro Jellyfin sem mexer no `dcgm-exporter`.
 - **Cliente de download**: qBittorrent (torrent), atrás de um container Gluetun fazendo VPN com a assinatura Surfshark do usuário.
   - **Confirmado via pesquisa (2026-10-27): Surfshark não suporta port forwarding.** O torrent funciona normalmente mesmo assim (não é pré-requisito), só com conectividade de entrada reduzida (menos peers conseguem abrir conexão direta com você — mais perceptível em trackers privados ou torrents com poucos seeds). Fontes: [VPNAlert](https://vpnalert.com/guides/surfshark-port-forwarding/), [VPNCentral](https://vpncentral.com/surfshark-vpn-review-2026-excellent-value-with-unlimited-device-connections/), [NatChecker](https://natchecker.com/blog/surfshark-port-forwarding).
-- **Imagens**: `linuxserver.io` para os apps `*arr`/qBittorrent (padrão de fato nesse ecossistema, já usamos o padrão de env vars `TZ`/`PUID`/`PGID` deles no Pi-hole), `jellyfin/jellyfin` oficial para o Jellyfin, `qmcgaw/gluetun` para a VPN.
+- **Imagens**: `linuxserver.io` para os apps `*arr`/qBittorrent (padrão de fato nesse ecossistema, usa o padrão de env vars `TZ`/`PUID`/`PGID`), `jellyfin/jellyfin` oficial para o Jellyfin, `qmcgaw/gluetun` para a VPN.
+- **PUID/PGID (Fase 4, 2026-11-02)**: `1000:1000` para todos os apps `linuxserver.io` da media stack (qBittorrent agora, `*arr` depois), consistente entre eles para evitar conflito de permissão ao escrever no mesmo PV compartilhado (`data/midias`). As pastas em `/mnt/data/midias` no TrueNAS foram criadas via `sudo mkdir` (dono `root`) na Fase 1 — precisam de `chown` para `1000:1000` antes do qBittorrent conseguir escrever.
+- **Gluetun**: tag `:latest` usada intencionalmente (não pinada em versão fixa como os outros apps) — a Surfshark muda lista de servidores/configs do lado deles com frequência, e o próprio gluetun recomenda manter atualizado para compatibilidade com o provider.
 
 ## GPU time-slicing
 
@@ -87,7 +89,7 @@ Isso deixa folga ampla (800GB+) mesmo somando os 9 configs novos da media stack 
 | Bazarr | Deployment | RW | Sim (~1Gi, HDD) | Não | `bazarr.home` |
 | Jellyseerr | Deployment | Não | Sim (~1Gi, HDD) | Não | `jellyseerr.home` |
 | qBittorrent + Gluetun | Deployment (2 containers, netns compartilhado) | RW | Sim (~2Gi, HDD) | Não | `qbittorrent.home` |
-| Unpackerr | Deployment | RW | Não | Não | — |
+| Unpackerr | Deployment | RW | Não | Não | — (Fase 5, integrado via API ao Sonarr/Radarr) |
 | Recyclarr | **CronJob** (sincroniza perfis periodicamente — encaixe nativo de CronJob, não é um daemon) | Não | Não (ConfigMap + Secret p/ API keys) | Não | — |
 
 ## Fases propostas (uma PR por fase)
@@ -95,8 +97,8 @@ Isso deixa folga ampla (800GB+) mesmo somando os 9 configs novos da media stack 
 1. ~~**TrueNAS**: `recordsize` 1M, restringir export, estrutura de pastas~~ — ✅ **feito** (ver [TrueNAS - config.md](../truenas/config.md)).
 2. ~~**GPU time-slicing** (libera GPU pro Jellyfin sem mexer no dcgm-exporter)~~ — ✅ **feito** (ver [Worker2 - config.md](../worker2/config.md)).
 3. ~~**Jellyfin**~~ — ✅ **feito** (2026-11-02): namespace `media`, PV/PVC estático pro `data/midias` (RO), PVCs de config e cache dedicados, GPU via time-slicing (`nvidia-smi` validado dentro do pod, GTX 970 visível), Service em `192.168.3.202`. Setup wizard concluído, hardware acceleration NVENC/NVDEC habilitado e biblioteca de mídia adicionada pelo usuário. Arquivos em `apps/jellyfin/`.
-4. **qBittorrent + Gluetun + Unpackerr** (pipeline de download).
-5. **Prowlarr + Sonarr + Radarr + Lidarr + Readarr + Bazarr** (núcleo *arr).
+4. ~~**qBittorrent + Gluetun**~~ — ✅ **feito** (2026-11-02): namespace `media`, PVC de config (2Gi) + PV/PVC compartilhado `media-pvc` montado RW, VPN WireGuard via Gluetun em modo `custom` (não `surfshark`/`SERVER_COUNTRIES` — ver "Troubleshooting" abaixo), Service em `192.168.3.206`. Validado: `ping`/DNS funcionando dentro do túnel, IP de saída confirmado como da Surfshark (`146.70.163.212`, não o IP residencial). Arquivos em `apps/qbittorrent/`. Detalhe completo do diagnóstico: [troubleshooting/gluetun_wireguard_stale_surfshark_server_list.md](../../troubleshooting/gluetun_wireguard_stale_surfshark_server_list.md).
+5. **Prowlarr + Sonarr + Radarr + Lidarr + Readarr + Bazarr + Unpackerr** (núcleo *arr). **Decisão (2026-11-02)**: Unpackerr movido desta fase para integração via API com Sonarr/Radarr (não modo "folder" standalone), por isso só faz sentido configurá-lo quando esses apps já existirem com API keys geradas.
 6. **Jellyseerr + Recyclarr** (camada de conveniência por cima).
 
 ## Pendências / decisões ainda em aberto
@@ -104,7 +106,7 @@ Isso deixa folga ampla (800GB+) mesmo somando os 9 configs novos da media stack 
 - ⚠️ **Resolver ao final da sessão**: registro `jellyfin.home` → `192.168.3.202` criado no Pi-hole (Local DNS Records), mas a resolução não está funcionando na prática — acesso direto por IP (`http://192.168.3.202`) funciona normalmente, mas qualquer serviço/cliente que tenta acessar via o nome DNS falha. Precisa investigar (suspeitas a checar: propagação/cache do Pi-hole, se o domínio `.home` está realmente caindo no Pi-hole e não sendo resolvido por outro DNS upstream primeiro, TTL de cache do cliente, erro de digitação no registro). Mesma classe de componente que já teve o incidente documentado em [troubleshooting/pihole_dns_wrong_loadbalancer_ip.md](../../troubleshooting/pihole_dns_wrong_loadbalancer_ip.md) — vale revisar esse doc antes de investigar do zero.
 - ⚠️ **Resolver ao final da sessão**: `192.168.3.201` duplicado — o `Service` `nginx` (namespace `default`, pré-existente) e o `kube-prometheus-stack-grafana` (namespace `monitoring`) estão ambos anotados com esse mesmo `loadBalancerIP`. Mesma classe de bug já documentada em [troubleshooting/pihole_dns_wrong_loadbalancer_ip.md](../../troubleshooting/pihole_dns_wrong_loadbalancer_ip.md) (dois `Service` não podem compartilhar um `loadBalancerIP` — o Kube-VIP atribui ao primeiro que pedir, o segundo é realocado silenciosamente). Detalhe completo em [Observability - config.md](../observability/config.md). Ainda não investigado/corrigido.
 - ⚠️ **Resolver ao final da sessão**: zvol `vm-k3s-disk` (disco da VM worker2) foi ampliado de 40GiB para 50GiB no TrueNAS, mas o Linux dentro da VM ainda não reconhece o espaço novo (partição/filesystem não cresceram). Comandos sugeridos e ainda não executados: `df -h /`, `lsblk`, `sudo growpart /dev/vda 1`, `sudo resize2fs /dev/vda1` (confirmar nomes de device reais antes de rodar).
-- Credenciais WireGuard da Surfshark para o Gluetun (Secret, criado manualmente via `kubectl create secret`, nunca commitado).
+- Credenciais WireGuard da Surfshark para o Gluetun (Secret `gluetun-surfshark-credentials` no namespace `media`, criado manualmente via `kubectl create secret`, nunca commitado) — ✅ criado (2026-11-02), chaves: `wireguard-private-key`, `wireguard-addresses`, `wireguard-public-key`, `wireguard-endpoint-ip` (modo `custom`, ver troubleshooting doc).
 - Conectar API keys entre os apps `*arr` (cada um gera a própria no primeiro boot — configuração manual via UI, não dá pra automatizar antecipadamente).
 - Config do Recyclarr (ConfigMap para perfis de qualidade + Secret para as API keys que ele consome).
 - Confirmar se algum indexer configurado no Prowlarr vai exigir FlareSolverr (só se descobre na prática, ao adicionar indexers reais).
