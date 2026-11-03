@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lidarr-deployment
+  namespace: media
+spec:
+  replicas: 1
+  # Recreate, não RollingUpdate - config (SQLite) em PVC ReadWriteOnce, dois
+  # pods escrevendo ao mesmo tempo corromperia o banco.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: lidarr
+  template:
+    metadata:
+      labels:
+        app: lidarr
+    spec:
+      containers:
+        - name: lidarr
+          image: lscr.io/linuxserver/lidarr:latest
+          env:
+            # PUID/PGID 1000:1000 - mesma convenção da Fase 4 (ver
+            # clusters/media-stack/plan.md). Precisa bater com o dono das
+            # pastas em data/midias pro Lidarr conseguir mover/criar
+            # hardlinks de downloads/ pra music/.
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "America/Sao_Paulo"
+          ports:
+            - name: http
+              containerPort: 8686
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: media
+              mountPath: /media
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: lidarr-pvc
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-pvc

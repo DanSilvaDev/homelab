@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bazarr-deployment
+  namespace: media
+spec:
+  replicas: 1
+  # Recreate, não RollingUpdate - config (SQLite) em PVC ReadWriteOnce, dois
+  # pods escrevendo ao mesmo tempo corromperia o banco.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bazarr
+  template:
+    metadata:
+      labels:
+        app: bazarr
+    spec:
+      containers:
+        - name: bazarr
+          image: lscr.io/linuxserver/bazarr:latest
+          env:
+            # PUID/PGID 1000:1000 - mesma convenção da Fase 4 (ver
+            # clusters/media-stack/plan.md). Precisa bater com o dono das
+            # pastas em data/midias pro Bazarr conseguir gravar os arquivos
+            # de legenda junto dos vídeos.
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "America/Sao_Paulo"
+          ports:
+            - name: http
+              containerPort: 6767
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: media
+              mountPath: /media
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: bazarr-pvc
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-pvc

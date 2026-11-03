@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lazylibrarian-deployment
+  namespace: media
+spec:
+  replicas: 1
+  # Recreate, não RollingUpdate - config (SQLite) em PVC ReadWriteOnce, dois
+  # pods escrevendo ao mesmo tempo corromperia o banco.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: lazylibrarian
+  template:
+    metadata:
+      labels:
+        app: lazylibrarian
+    spec:
+      containers:
+        - name: lazylibrarian
+          # LazyLibrarian no lugar do Readarr (planejado originalmente) - o
+          # Readarr foi descontinuado pelo projeto upstream em 2025 (metadados
+          # pararam de funcionar, falta de desenvolvedores) e a imagem
+          # linuxserver.io/readarr foi depreciada em seguida. LazyLibrarian é
+          # mais antigo mas ativamente mantido, com imagem linuxserver.io
+          # atual, e continua integrando com o Prowlarr (está na lista oficial
+          # de apps suportados por ele, junto com Sonarr/Radarr/Lidarr) - não
+          # quebra o padrão "um lugar só pra gerenciar indexers" da stack.
+          image: lscr.io/linuxserver/lazylibrarian:latest
+          env:
+            # PUID/PGID 1000:1000 - mesma convenção da Fase 4 (ver
+            # clusters/media-stack/plan.md). Precisa bater com o dono das
+            # pastas em data/midias pro LazyLibrarian conseguir mover/criar
+            # hardlinks de downloads/ pra books/.
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "America/Sao_Paulo"
+          ports:
+            - name: http
+              containerPort: 5299
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: media
+              mountPath: /media
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: lazylibrarian-pvc
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-pvc

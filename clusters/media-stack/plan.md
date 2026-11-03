@@ -8,7 +8,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md) | [Worker2 - config.md]
 
 - **Jellyfin** — servidor de mídia, transcodificação via GPU (GTX 970/worker2).
 - **Prowlarr** — gerenciador de indexers (alimenta Sonarr/Radarr/Lidarr/Readarr).
-- **Sonarr** (séries), **Radarr** (filmes), **Lidarr** (música), **Readarr** (livros/audiobooks).
+- **Sonarr** (séries), **Radarr** (filmes), **Lidarr** (música), **LazyLibrarian** (livros/audiobooks — substitui o Readarr, descontinuado; ver "Decisões já tomadas").
 - **Bazarr** — legendas (integra com Sonarr/Radarr).
 - **Jellyseerr** — UI de pedidos de conteúdo, integra com Jellyfin + Sonarr/Radarr.
 - **qBittorrent + Gluetun** — cliente de torrent atrás de VPN (assinatura Surfshark do usuário).
@@ -27,6 +27,8 @@ Fora de escopo por enquanto: FlareSolverr (só adicionar se algum indexer do Pro
 - **Imagens**: `linuxserver.io` para os apps `*arr`/qBittorrent (padrão de fato nesse ecossistema, usa o padrão de env vars `TZ`/`PUID`/`PGID`), `jellyfin/jellyfin` oficial para o Jellyfin, `qmcgaw/gluetun` para a VPN.
 - **PUID/PGID (Fase 4, 2026-11-02)**: `1000:1000` para todos os apps `linuxserver.io` da media stack (qBittorrent agora, `*arr` depois), consistente entre eles para evitar conflito de permissão ao escrever no mesmo PV compartilhado (`data/midias`). As pastas em `/mnt/data/midias` no TrueNAS foram criadas via `sudo mkdir` (dono `root`) na Fase 1 — precisam de `chown` para `1000:1000` antes do qBittorrent conseguir escrever.
 - **Gluetun**: tag `:latest` usada intencionalmente (não pinada em versão fixa como os outros apps) — a Surfshark muda lista de servidores/configs do lado deles com frequência, e o próprio gluetun recomenda manter atualizado para compatibilidade com o provider.
+- **Readarr substituído por LazyLibrarian (Fase 5, 2026-11-02)**: o Readarr foi descontinuado pelo projeto upstream em 2025 (metadados pararam de funcionar, falta de desenvolvedores) e a imagem `linuxserver.io/readarr` foi depreciada em seguida — tentar implantar deu `ImagePullBackOff` (`no match for platform in manifest`). LazyLibrarian cobre o mesmo papel (livros/audiobooks), é ativamente mantido, tem imagem `linuxserver.io` atual, e continua na lista oficial de apps suportados pelo Prowlarr — não quebra o padrão de indexer centralizado da stack. Porta padrão `5299` (vs `8787` do Readarr).
+- **Diretório `apps/servarr/` (Fase 5, 2026-11-02)**: Prowlarr, Sonarr, Radarr, Lidarr, LazyLibrarian e Bazarr agrupados em `apps/servarr/<app>/` (em vez de `apps/<app>/` solto) — "Servarr" é o nome oficial da comunidade pra essa família de apps (wiki.servarr.com).
 
 ## GPU time-slicing
 
@@ -42,7 +44,7 @@ Motivo: precisamos de um caminho previsível e compartilhado entre vários apps 
 
 | Quem monta | Modo |
 |---|---|
-| qBittorrent, Unpackerr, Sonarr, Radarr, Lidarr, Readarr, Bazarr | RW |
+| qBittorrent, Unpackerr, Sonarr, Radarr, Lidarr, LazyLibrarian, Bazarr | RW |
 | Jellyfin | RO |
 | Prowlarr, Jellyseerr, Recyclarr | Não monta (só falam com as APIs dos outros apps) |
 
@@ -56,7 +58,7 @@ Motivo: precisamos de um caminho previsível e compartilhado entre vários apps 
 | Sonarr | ~1Gi | `truenas-nfs-ssd` |
 | Radarr | ~1Gi | `truenas-nfs-ssd` |
 | Lidarr | ~1Gi | `truenas-nfs-ssd` |
-| Readarr | ~1Gi | `truenas-nfs-ssd` |
+| LazyLibrarian | ~1Gi | `truenas-nfs-ssd` |
 | Bazarr | ~1Gi | `truenas-nfs-ssd` |
 | Jellyseerr | ~1Gi | `truenas-nfs-ssd` |
 | qBittorrent | ~2Gi | `truenas-nfs-ssd` |
@@ -74,7 +76,7 @@ Contas atualizadas: pool `ssd-apps` agora com **960GB** no total.
 
 Isso deixa folga ampla (800GB+) mesmo somando os 9 configs novos da media stack (cada um pequeno, 1-5Gi) — **a divisão SSD/HDD por escassez de espaço não é mais necessária.**
 
-**Decisão revisada**: todos os Config PVCs da media stack (Jellyfin, Prowlarr, Sonarr, Radarr, Lidarr, Readarr, Bazarr, Jellyseerr, qBittorrent) passam a usar `truenas-nfs-ssd`. Justificativa: sobra espaço de sobra, esses configs (SQLite de cada app) se beneficiam de latência menor, e quando o mirror do `ssd-apps` for concluído eles ganham redundância que o pool `data` (HDD, ainda stripe single-disk) não tem.
+**Decisão revisada**: todos os Config PVCs da media stack (Jellyfin, Prowlarr, Sonarr, Radarr, Lidarr, LazyLibrarian, Bazarr, Jellyseerr, qBittorrent) passam a usar `truenas-nfs-ssd`. Justificativa: sobra espaço de sobra, esses configs (SQLite de cada app) se beneficiam de latência menor, e quando o mirror do `ssd-apps` for concluído eles ganham redundância que o pool `data` (HDD, ainda stripe single-disk) não tem.
 
 ## Inventário de componentes
 
@@ -85,7 +87,7 @@ Isso deixa folga ampla (800GB+) mesmo somando os 9 configs novos da media stack 
 | Sonarr | Deployment | RW | Sim (~1Gi, HDD) | Não | `sonarr.home` |
 | Radarr | Deployment | RW | Sim (~1Gi, HDD) | Não | `radarr.home` |
 | Lidarr | Deployment | RW | Sim (~1Gi, HDD) | Não | `lidarr.home` |
-| Readarr | Deployment | RW | Sim (~1Gi, HDD) | Não | `readarr.home` |
+| LazyLibrarian | Deployment | RW | Sim (~1Gi, HDD) | Não | `lazylibrarian.home` |
 | Bazarr | Deployment | RW | Sim (~1Gi, HDD) | Não | `bazarr.home` |
 | Jellyseerr | Deployment | Não | Sim (~1Gi, HDD) | Não | `jellyseerr.home` |
 | qBittorrent + Gluetun | Deployment (2 containers, netns compartilhado) | RW | Sim (~2Gi, HDD) | Não | `qbittorrent.home` |
@@ -98,7 +100,7 @@ Isso deixa folga ampla (800GB+) mesmo somando os 9 configs novos da media stack 
 2. ~~**GPU time-slicing** (libera GPU pro Jellyfin sem mexer no dcgm-exporter)~~ — ✅ **feito** (ver [Worker2 - config.md](../worker2/config.md)).
 3. ~~**Jellyfin**~~ — ✅ **feito** (2026-11-02): namespace `media`, PV/PVC estático pro `data/midias` (RO), PVCs de config e cache dedicados, GPU via time-slicing (`nvidia-smi` validado dentro do pod, GTX 970 visível), Service em `192.168.3.202`. Setup wizard concluído, hardware acceleration NVENC/NVDEC habilitado e biblioteca de mídia adicionada pelo usuário. Arquivos em `apps/jellyfin/`.
 4. ~~**qBittorrent + Gluetun**~~ — ✅ **feito** (2026-11-02): namespace `media`, PVC de config (2Gi) + PV/PVC compartilhado `media-pvc` montado RW, VPN WireGuard via Gluetun em modo `custom` (não `surfshark`/`SERVER_COUNTRIES`, lista interna desatualizada) + `HEALTH_TARGET_ADDRESSES` apontando pra um IP fixo (não hostname, evita falso-negativo do healthcheck), Service em `192.168.3.206`. Validado: `ping`/DNS funcionando dentro do túnel, IP de saída confirmado como da Surfshark (`146.70.163.212`/`138.199.58.36`, não o IP residencial), 0 restarts internos do túnel. Arquivos em `apps/qbittorrent/`. Detalhe completo do diagnóstico (duas causas raiz distintas): [troubleshooting/gluetun_wireguard_stale_surfshark_server_list.md](../../troubleshooting/gluetun_wireguard_stale_surfshark_server_list.md).
-5. **Prowlarr + Sonarr + Radarr + Lidarr + Readarr + Bazarr + Unpackerr** (núcleo *arr). **Decisão (2026-11-02)**: Unpackerr movido desta fase para integração via API com Sonarr/Radarr (não modo "folder" standalone), por isso só faz sentido configurá-lo quando esses apps já existirem com API keys geradas.
+5. ~~**Prowlarr + Sonarr + Radarr + Lidarr + LazyLibrarian + Bazarr**~~ — ✅ **feito** (2026-11-02, Unpackerr pendente): namespace `media`, PVCs de config (~1Gi, `truenas-nfs-ssd`) para cada app, Services em `192.168.3.207` (Prowlarr) a `192.168.3.212` (Bazarr). Configuração via UI concluída: API keys geradas e conectadas entre os apps (Prowlarr alimentando os indexers pros demais, download client qBittorrent conectado). `limits.cpu` em `1` (1000m) em todos os 6 deployments — instabilidade observada com o valor anterior, normalizou após o aumento. Unpackerr segue pendente (integração via API com Sonarr/Radarr, decisão original de só configurá-lo depois que os demais tivessem API keys geradas — já têm, pode ser adicionado). Arquivos em `apps/servarr/`.
 6. **Jellyseerr + Recyclarr** (camada de conveniência por cima).
 
 ## Pendências / decisões ainda em aberto
