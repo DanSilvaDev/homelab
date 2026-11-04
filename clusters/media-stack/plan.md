@@ -15,7 +15,9 @@ Ver também: [TrueNAS - config.md](../truenas/config.md) | [Worker2 - config.md]
 - **Unpackerr** — extração automática de downloads compactados.
 - **Recyclarr** — sincroniza perfis de qualidade (guias TRaSH) no Sonarr/Radarr/Lidarr/Readarr periodicamente.
 
-Fora de escopo por enquanto: FlareSolverr (só adicionar se algum indexer do Prowlarr exigir), Usenet (SABnzbd/NZBGet), acesso remoto (Tailscale/reverse proxy — próxima etapa futura, depois de validar o básico só na LAN).
+Fora de escopo por enquanto: Usenet (SABnzbd/NZBGet), acesso remoto (Tailscale/reverse proxy — próxima etapa futura, depois de validar o básico só na LAN).
+
+**FlareSolverr**: estava fora de escopo ("só adicionar se algum indexer exigir"), mas confirmado como necessário (2026-11-04) — ver pendências.
 
 ## Decisões já tomadas
 
@@ -100,8 +102,14 @@ Isso deixa folga ampla (800GB+) mesmo somando os 9 configs novos da media stack 
 2. ~~**GPU time-slicing** (libera GPU pro Jellyfin sem mexer no dcgm-exporter)~~ — ✅ **feito** (ver [Worker2 - config.md](../worker2/config.md)).
 3. ~~**Jellyfin**~~ — ✅ **feito** (2026-11-02): namespace `media`, PV/PVC estático pro `data/midias` (RO), PVCs de config e cache dedicados, GPU via time-slicing (`nvidia-smi` validado dentro do pod, GTX 970 visível), Service em `192.168.3.202`. Setup wizard concluído, hardware acceleration NVENC/NVDEC habilitado e biblioteca de mídia adicionada pelo usuário. Arquivos em `apps/jellyfin/`.
 4. ~~**qBittorrent + Gluetun**~~ — ✅ **feito** (2026-11-02): namespace `media`, PVC de config (2Gi) + PV/PVC compartilhado `media-pvc` montado RW, VPN WireGuard via Gluetun em modo `custom` (não `surfshark`/`SERVER_COUNTRIES`, lista interna desatualizada) + `HEALTH_TARGET_ADDRESSES` apontando pra um IP fixo (não hostname, evita falso-negativo do healthcheck), Service em `192.168.3.206`. Validado: `ping`/DNS funcionando dentro do túnel, IP de saída confirmado como da Surfshark (`146.70.163.212`/`138.199.58.36`, não o IP residencial), 0 restarts internos do túnel. Arquivos em `apps/qbittorrent/`. Detalhe completo do diagnóstico (duas causas raiz distintas): [troubleshooting/gluetun_wireguard_stale_surfshark_server_list.md](../../troubleshooting/gluetun_wireguard_stale_surfshark_server_list.md).
-5. ~~**Prowlarr + Sonarr + Radarr + Lidarr + LazyLibrarian + Bazarr**~~ — ✅ **feito** (2026-11-02, Unpackerr pendente): namespace `media`, PVCs de config (~1Gi, `truenas-nfs-ssd`) para cada app, Services em `192.168.3.207` (Prowlarr) a `192.168.3.212` (Bazarr). Configuração via UI concluída: API keys geradas e conectadas entre os apps (Prowlarr alimentando os indexers pros demais, download client qBittorrent conectado). `limits.cpu` em `1` (1000m) em todos os 6 deployments — instabilidade observada com o valor anterior, normalizou após o aumento. Unpackerr segue pendente (integração via API com Sonarr/Radarr, decisão original de só configurá-lo depois que os demais tivessem API keys geradas — já têm, pode ser adicionado). Arquivos em `apps/servarr/`.
+5. ~~**Prowlarr + Sonarr + Radarr + Lidarr + LazyLibrarian + Bazarr + Unpackerr**~~ — ✅ **feito** (2026-11-02): namespace `media`, PVCs de config (~1Gi, `truenas-nfs-ssd`) para cada app, Services em `192.168.3.207` (Prowlarr) a `192.168.3.212` (Bazarr). Configuração via UI concluída: API keys geradas e conectadas entre os apps (Prowlarr alimentando os indexers pros demais, download client qBittorrent conectado). `limits.cpu` em `1` (1000m) em todos os 6 deployments — instabilidade observada com o valor anterior, normalizou após o aumento. Unpackerr adicionado por último (integração via API com Sonarr/Radarr/Lidarr, detalhes na seção "Unpackerr" abaixo). Arquivos em `apps/servarr/`.
 6. **Jellyseerr + Recyclarr** (camada de conveniência por cima).
+
+## Unpackerr
+
+**Feito (2026-11-02, aplicado e rodando em 2026-11-04)**: `apps/servarr/unpackerr/deployment.yaml` — integração via API com Sonarr, Radarr e Lidarr (env vars `UN_<APP>_0_URL`/`UN_<APP>_0_API_KEY`/`UN_<APP>_0_PATHS_0`, API keys via Secret `unpackerr-api-keys` criado manualmente, nunca commitado — mesmo padrão do Gluetun/Surfshark). Sem PVC (config 100% via env vars, sem arquivo `.conf`), monta `media-pvc` em `/media` (mesmo path usado por Sonarr/Radarr/Lidarr — obrigatório para o Unpackerr casar o path retornado pela API com o path local). Imagem `golift/unpackerr` não segue o padrão PUID/PGID do linuxserver.io — usa `securityContext.runAsUser/runAsGroup: 1000` em vez disso.
+
+⚠️ **Limitação descoberta**: o Unpackerr só tem integração oficial com Sonarr/Radarr/Lidarr/Readarr (família "Starr"). Como o Readarr foi substituído por LazyLibrarian nesta stack (ver "Decisões já tomadas"), **livros/audiobooks baixados compactados (zip/rar) não são extraídos automaticamente** — fica de fora do escopo do Unpackerr. Se isso vier a ser um problema na prática, verificar se o próprio LazyLibrarian tem extração embutida (não confirmado ainda).
 
 ## Pendências / decisões ainda em aberto
 
@@ -111,10 +119,12 @@ Isso deixa folga ampla (800GB+) mesmo somando os 9 configs novos da media stack 
 - Credenciais WireGuard da Surfshark para o Gluetun (Secret `gluetun-surfshark-credentials` no namespace `media`, criado manualmente via `kubectl create secret`, nunca commitado) — ✅ criado (2026-11-02), chaves: `wireguard-private-key`, `wireguard-addresses`, `wireguard-public-key`, `wireguard-endpoint-ip` (modo `custom`, ver troubleshooting doc).
 - Conectar API keys entre os apps `*arr` (cada um gera a própria no primeiro boot — configuração manual via UI, não dá pra automatizar antecipadamente).
 - Config do Recyclarr (ConfigMap para perfis de qualidade + Secret para as API keys que ele consome).
-- Confirmar se algum indexer configurado no Prowlarr vai exigir FlareSolverr (só se descobre na prática, ao adicionar indexers reais).
+- ⚠️ **Resolver ao final da sessão**: **FlareSolverr confirmado como necessário** (2026-11-04) — pelo menos um indexer configurado no Prowlarr exige (proteção Cloudflare). Precisa implantar (fora de escopo original, ver "Outros `*arr`/ferramentas do ecossistema") e conectar ao Prowlarr (Settings → Indexers → Indexer Proxies).
 - Decidir IPs do `kube-vip` para os 9 novos `LoadBalancer` (tem sobra no range `192.168.3.200-254`, inclusive o `.202` que ficou livre com a remoção do Rancher).
+- ⚠️ **Resolver ao final da sessão**: erro "Failed to Load Indexers from API" em **todos** os indexers configurados, aparecendo tanto na página de Indexers do Prowlarr quanto na dos apps `*arr` que sincronizam com ele (2026-11-03). Aumento de `limits.cpu` (ver Fase 5) não resolveu — sintoma afetando todos os indexers de uma vez sugere problema de conectividade de saída do pod do Prowlarr (DNS ou rota de internet), não CPU nem indexer específico. Diagnóstico pendente: status/eventos do pod (`kubectl describe pod`, OOMKilled?), logs do Prowlarr, teste de conectividade bruta (`wget` por IP) e de DNS (`nslookup`) de dentro do pod, uso real de CPU (`kubectl top pod`).
+- ⚠️ **Resolver ao final da sessão**: pod do Jellyfin reiniciando com frequência anormal — **16 restarts em 35 horas** (2026-11-04). Entender causa raiz antes de assumir que é esperado: checar `kubectl describe pod` (motivo do último restart - OOMKilled, CrashLoopBackOff, liveness probe falhando, etc.), `kubectl logs --previous` do container antes do restart, e se os `limits` de CPU/memória (ver tabela de recursos da Fase 3) estão sendo estourados durante transcodificação via GPU.
 
-## Outros `*arr`/ferramentas do ecossistema (referência, fora de escopo por enquanto)
+## Outros `*arr`/ferramentas do ecossistema (referência)
 
-- **FlareSolverr** — proxy auxiliar do Prowlarr para indexers com proteção Cloudflare.
+- **FlareSolverr** — proxy auxiliar do Prowlarr para indexers com proteção Cloudflare. Confirmado como necessário (2026-11-04) — ver pendências.
 - **Tautulli** equivalente para Jellyfin seria o **Jellystat** (estatísticas de uso) — não pedido, só referência.
