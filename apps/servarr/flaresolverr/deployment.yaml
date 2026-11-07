@@ -13,11 +13,13 @@ spec:
       labels:
         app: flaresolverr
     spec:
-      # Imagem já roda como usuário não-root fixo (criado no próprio Dockerfile,
-      # sem UID numérico documentado) - não força runAsUser (poderia não bater
-      # com o UID real da imagem), só confirma que não é root.
-      securityContext:
-        runAsNonRoot: true
+      # Imagem já roda como usuário não-root fixo (USER flaresolverr no próprio
+      # Dockerfile), mas por nome, não UID numérico - `runAsNonRoot: true` falha
+      # na admissão do pod porque o kubelet não consegue verificar estaticamente
+      # um usuário não-numérico ("container has runAsNonRoot and image has
+      # non-numeric user ... cannot verify user is non-root", confirmado
+      # 2026-11-07). Sem securityContext aqui - deixa a imagem usar seu próprio
+      # usuário padrão.
       containers:
         - name: flaresolverr
           image: ghcr.io/flaresolverr/flaresolverr:latest
