@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flaresolverr-deployment
+  namespace: media
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flaresolverr
+  template:
+    metadata:
+      labels:
+        app: flaresolverr
+    spec:
+      # Imagem já roda como usuário não-root fixo (criado no próprio Dockerfile,
+      # sem UID numérico documentado) - não força runAsUser (poderia não bater
+      # com o UID real da imagem), só confirma que não é root.
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: flaresolverr
+          image: ghcr.io/flaresolverr/flaresolverr:latest
+          env:
+            - name: TZ
+              value: "America/Sao_Paulo"
+            - name: LOG_LEVEL
+              value: "info"
+          ports:
+            - name: http
+              containerPort: 8191
+          volumeMounts:
+            # Recomendação oficial do projeto: montar /tmp em tmpfs - cada
+            # request sobe um Chromium headless novo, que escreve arquivos
+            # temporários ali (10-30MB por request, descartado ao final).
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            # Mais generoso que o resto da stack de propósito: cada request
+            # sobe uma instância nova de Chromium headless (uso de memória
+            # alto por natureza, conforme aviso do próprio projeto).
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi

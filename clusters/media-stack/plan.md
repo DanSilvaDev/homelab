@@ -17,7 +17,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md) | [Worker2 - config.md]
 
 Fora de escopo por enquanto: Usenet (SABnzbd/NZBGet), acesso remoto (Tailscale/reverse proxy — próxima etapa futura, depois de validar o básico só na LAN).
 
-**FlareSolverr**: estava fora de escopo ("só adicionar se algum indexer exigir"), mas confirmado como necessário (2026-11-04) — ver pendências.
+**FlareSolverr**: estava fora de escopo ("só adicionar se algum indexer exigir"), mas confirmado como necessário (2026-11-04) — ver seção "FlareSolverr" abaixo.
 
 ## Decisões já tomadas
 
@@ -30,7 +30,7 @@ Fora de escopo por enquanto: Usenet (SABnzbd/NZBGet), acesso remoto (Tailscale/r
 - **PUID/PGID (Fase 4, 2026-11-02)**: `1000:1000` para todos os apps `linuxserver.io` da media stack (qBittorrent agora, `*arr` depois), consistente entre eles para evitar conflito de permissão ao escrever no mesmo PV compartilhado (`data/midias`). As pastas em `/mnt/data/midias` no TrueNAS foram criadas via `sudo mkdir` (dono `root`) na Fase 1 — precisam de `chown` para `1000:1000` antes do qBittorrent conseguir escrever.
 - **Gluetun**: tag `:latest` usada intencionalmente (não pinada em versão fixa como os outros apps) — a Surfshark muda lista de servidores/configs do lado deles com frequência, e o próprio gluetun recomenda manter atualizado para compatibilidade com o provider.
 - **Readarr substituído por LazyLibrarian (Fase 5, 2026-11-02)**: o Readarr foi descontinuado pelo projeto upstream em 2025 (metadados pararam de funcionar, falta de desenvolvedores) e a imagem `linuxserver.io/readarr` foi depreciada em seguida — tentar implantar deu `ImagePullBackOff` (`no match for platform in manifest`). LazyLibrarian cobre o mesmo papel (livros/audiobooks), é ativamente mantido, tem imagem `linuxserver.io` atual, e continua na lista oficial de apps suportados pelo Prowlarr — não quebra o padrão de indexer centralizado da stack. Porta padrão `5299` (vs `8787` do Readarr).
-- **Diretório `apps/servarr/` (Fase 5, 2026-11-02; ampliado na Fase 6, 2026-11-07)**: Prowlarr, Sonarr, Radarr, Lidarr, LazyLibrarian, Bazarr, Unpackerr, Seerr e Recyclarr agrupados em `apps/servarr/<app>/` (em vez de `apps/<app>/` solto) — "Servarr" é o nome oficial da comunidade pra essa família de apps (wiki.servarr.com).
+- **Diretório `apps/servarr/` (Fase 5, 2026-11-02; ampliado na Fase 6 e com o FlareSolverr, 2026-11-07)**: Prowlarr, Sonarr, Radarr, Lidarr, LazyLibrarian, Bazarr, Unpackerr, Seerr, Recyclarr e FlareSolverr agrupados em `apps/servarr/<app>/` (em vez de `apps/<app>/` solto) — "Servarr" é o nome oficial da comunidade pra essa família de apps (wiki.servarr.com).
 
 ## GPU time-slicing
 
@@ -48,7 +48,7 @@ Motivo: precisamos de um caminho previsível e compartilhado entre vários apps 
 |---|---|
 | qBittorrent, Unpackerr, Sonarr, Radarr, Lidarr, LazyLibrarian, Bazarr | RW |
 | Jellyfin | RO |
-| Prowlarr, Seerr, Recyclarr | Não monta (só falam com as APIs dos outros apps) |
+| Prowlarr, Seerr, Recyclarr, FlareSolverr | Não monta (só falam com as APIs/entre si) |
 
 ### Config PVCs (um por app com estado)
 
@@ -95,6 +95,7 @@ Isso deixa folga ampla (800GB+) mesmo somando os 9 configs novos da media stack 
 | qBittorrent + Gluetun | Deployment (2 containers, netns compartilhado) | RW | Sim (~2Gi, HDD) | Não | `qbittorrent.home` |
 | Unpackerr | Deployment | RW | Não | Não | — (Fase 5, integrado via API ao Sonarr/Radarr) |
 | Recyclarr | **CronJob** (sincroniza perfis periodicamente — encaixe nativo de CronJob, não é um daemon) | Não | Não (ConfigMap + Secret p/ API keys) | Não | — |
+| FlareSolverr | Deployment | Não | Não | Não | `ClusterIP` interno (`flaresolverr:8191`), sem LoadBalancer/DNS de propósito — ver seção "FlareSolverr" |
 
 ## Fases propostas (uma PR por fase)
 
@@ -140,18 +141,28 @@ kubectl create secret generic unpackerr-api-keys \
   - **Perfis de qualidade preenchidos (2026-11-07)**: Radarr usa "HD Bluray + WEB" (`trash_id d1d67249d3890e49bc12e275d989a7e9`, exemplo oficial da documentação) e Sonarr usa "WEB-1080p" (`trash_id 72dae194fc92bf828f32cde7744e51a1` + grupo de custom formats, copiado do template oficial `sonarr/templates/web-1080p.yml` em [github.com/recyclarr/config-templates](https://github.com/recyclarr/config-templates), branch `v8`). São perfis "bons o suficiente pra maioria", não uma escolha definitiva — trocar pelo template de outra qualidade (remux, 2160p, etc.) no mesmo repo se preferir outra coisa.
   - **Gotcha de diagnóstico (2026-11-07)**: `recyclarr list quality-profiles` (comando usado pra tentar descobrir os `trash_id`s via CLI) travou indefinidamente no passo `git fetch` dentro de um pod `kubectl run` temporário da imagem `ghcr.io/recyclarr/recyclarr:8`, mesmo com DNS e egress HTTPS/git confirmados funcionando normalmente a partir de outro pod no mesmo namespace (`nicolaka/netshoot`, mesmo repo, clone instantâneo) — ou seja, não é problema de rede do cluster, é algo específico do binário git empacotado nessa imagem/ambiente (não investigado a fundo, baixa prioridade). Os `trash_id`s acima foram obtidos direto do repo de templates via `git clone` no `netshoot`, contornando o CLI do Recyclarr.
 
+## FlareSolverr
+
+**Feito (2026-11-07)**: `apps/servarr/flaresolverr/` — proxy auxiliar do Prowlarr que resolve o desafio anti-bot do Cloudflare (roda um Chromium headless) antes de repassar a resposta real pro indexer. Sem ele, qualquer indexer protegido por Cloudflare falha mesmo com a config correta.
+
+- Imagem oficial `ghcr.io/flaresolverr/flaresolverr:latest`, porta `8191`. Já roda como usuário não-root por padrão (criado no próprio Dockerfile do projeto, sem UID numérico documentado) — `securityContext.runAsNonRoot: true` só confirma isso, sem forçar um `runAsUser` que poderia não bater com o UID real da imagem.
+- Sem PVC (stateless — cada request sobe uma instância nova de Chromium, descartada ao final). `/tmp` montado como `emptyDir` em memória (`medium: Memory`), recomendação oficial do projeto (arquivos temporários de 10-30MB por request).
+- `resources` mais generosos que o resto da stack de propósito — Chromium headless consome bastante memória por natureza (aviso do próprio projeto: evitar muitos requests simultâneos em máquina com pouca RAM).
+- **Service é `ClusterIP`, não `LoadBalancer`** — diferente de todo o resto da stack, de propósito: o projeto avisa explicitamente pra não expor o FlareSolverr na rede/internet (pode ser abusado como proxy anônimo). Só o Prowlarr fala com ele, via DNS interno do cluster (`http://flaresolverr:8191`). Sem IP fixo do kube-vip, sem entrada no Pi-hole.
+- Pendente (configuração manual via UI): conectar ao Prowlarr em **Settings → Indexers → Indexer Proxies** e associar aos indexers que exigem Cloudflare.
+
 ## Pendências / decisões ainda em aberto
 
 - ⚠️ **Resolver ao final da sessão**: registro `jellyfin.home` → `192.168.3.202` criado no Pi-hole (Local DNS Records), mas a resolução não está funcionando na prática — acesso direto por IP (`http://192.168.3.202`) funciona normalmente, mas qualquer serviço/cliente que tenta acessar via o nome DNS falha. Precisa investigar (suspeitas a checar: propagação/cache do Pi-hole, se o domínio `.home` está realmente caindo no Pi-hole e não sendo resolvido por outro DNS upstream primeiro, TTL de cache do cliente, erro de digitação no registro). Mesma classe de componente que já teve o incidente documentado em [troubleshooting/pihole_dns_wrong_loadbalancer_ip.md](../../troubleshooting/pihole_dns_wrong_loadbalancer_ip.md) — vale revisar esse doc antes de investigar do zero.
 - ⚠️ **Resolver ao final da sessão**: `192.168.3.201` duplicado — o `Service` `nginx` (namespace `default`, pré-existente) e o `kube-prometheus-stack-grafana` (namespace `monitoring`) estão ambos anotados com esse mesmo `loadBalancerIP`. Mesma classe de bug já documentada em [troubleshooting/pihole_dns_wrong_loadbalancer_ip.md](../../troubleshooting/pihole_dns_wrong_loadbalancer_ip.md) (dois `Service` não podem compartilhar um `loadBalancerIP` — o Kube-VIP atribui ao primeiro que pedir, o segundo é realocado silenciosamente). Detalhe completo em [Observability - config.md](../observability/config.md). Ainda não investigado/corrigido.
 - ⚠️ **Resolver ao final da sessão**: zvol `vm-k3s-disk` (disco da VM worker2) foi ampliado de 40GiB para 50GiB no TrueNAS, mas o Linux dentro da VM ainda não reconhece o espaço novo (partição/filesystem não cresceram). Comandos sugeridos e ainda não executados: `df -h /`, `lsblk`, `sudo growpart /dev/vda 1`, `sudo resize2fs /dev/vda1` (confirmar nomes de device reais antes de rodar).
 - [x] Credenciais WireGuard da Surfshark para o Gluetun (Secret `gluetun-surfshark-credentials` no namespace `media`, criado manualmente via `kubectl create secret`, nunca commitado) — ✅ criado (2026-11-02), chaves: `wireguard-private-key`, `wireguard-addresses`, `wireguard-public-key`, `wireguard-endpoint-ip` (modo `custom`, ver troubleshooting doc).
-- ⚠️ **Resolver ao final da sessão**: **FlareSolverr confirmado como necessário** (2026-11-04) — pelo menos um indexer configurado no Prowlarr exige (proteção Cloudflare). Precisa implantar (fora de escopo original, ver "Outros `*arr`/ferramentas do ecossistema") e conectar ao Prowlarr (Settings → Indexers → Indexer Proxies).
+- [x] **FlareSolverr confirmado como necessário** (2026-11-04) — pelo menos um indexer configurado no Prowlarr exige (proteção Cloudflare). **Implantado (2026-11-07)**, ver seção "FlareSolverr" abaixo. Pendente: conectar ao Prowlarr (Settings → Indexers → Indexer Proxies) e associar aos indexers que precisam.
 - ⚠️ **Resolver ao final da sessão**: erro "Failed to Load Indexers from API" em **todos** os indexers configurados, aparecendo tanto na página de Indexers do Prowlarr quanto na dos apps `*arr` que sincronizam com ele (2026-11-03). Aumento de `limits.cpu` (ver Fase 5) não resolveu — sintoma afetando todos os indexers de uma vez sugere problema de conectividade de saída do pod do Prowlarr (DNS ou rota de internet), não CPU nem indexer específico. Diagnóstico pendente: status/eventos do pod (`kubectl describe pod`, OOMKilled?), logs do Prowlarr, teste de conectividade bruta (`wget` por IP) e de DNS (`nslookup`) de dentro do pod, uso real de CPU (`kubectl top pod`).
 - ⚠️ **Resolver ao final da sessão**: pod do Jellyfin reiniciando com frequência anormal — **16 restarts em 35 horas** (2026-11-04). Entender causa raiz antes de assumir que é esperado: checar `kubectl describe pod` (motivo do último restart - OOMKilled, CrashLoopBackOff, liveness probe falhando, etc.), `kubectl logs --previous` do container antes do restart, e se os `limits` de CPU/memória (ver tabela de recursos da Fase 3) estão sendo estourados durante transcodificação via GPU.
 - [x] `FailedMount` recorrente (325x em 10h, `kubectl events --all-namespaces`) no pod `nfs-subdir-provisioner-ssd-nfs-subdir-external-provisioner` (namespace `nfs-provisioner`) — `mount.nfs: access denied by server while mounting 192.168.3.103:/mnt/ssd-apps/k8s` (2026-11-04). **Resolvido**: causa foi um problema de rede pontual naquele dia (não um export NFS desatualizado, como se suspeitava); reiniciar o deployment do provisioner normalizou o serviço e o cluster voltou ao normal.
 
 ## Outros `*arr`/ferramentas do ecossistema (referência)
 
-- **FlareSolverr** — proxy auxiliar do Prowlarr para indexers com proteção Cloudflare. Confirmado como necessário (2026-11-04) — ver pendências.
+- **FlareSolverr** — proxy auxiliar do Prowlarr para indexers com proteção Cloudflare. Implantado (2026-11-07) — ver seção "FlareSolverr" acima.
 - **Tautulli** equivalente para Jellyfin seria o **Jellystat** (estatísticas de uso) — não pedido, só referência.
