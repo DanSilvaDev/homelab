@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seerr-deployment
+  namespace: media
+spec:
+  replicas: 1
+  # Recreate, não RollingUpdate - mesmo motivo dos outros apps com estado: dois pods
+  # escrevendo ao mesmo tempo no config (PVC ReadWriteOnce) corromperia os dados.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: seerr
+  template:
+    metadata:
+      labels:
+        app: seerr
+    spec:
+      # O projeto Jellyseerr foi descontinuado e fundido com o Overseerr, virando o
+      # "Seerr" (ghcr.io/seerr-team/seerr) - a imagem antiga (fallenbagel/jellyseerr)
+      # está arquivada no Docker Hub ("DO NOT USE THIS IMAGE", confirmado em 2026-11-07).
+      # Mesma funcionalidade (UI de pedidos, integra com Jellyfin + Sonarr/Radarr).
+      # Não segue o padrão PUID/PGID do linuxserver.io - roda como usuário fixo `node`
+      # (UID/GID 1000), equivalente via securityContext (mesma convenção 1000:1000 do
+      # resto da stack em data/midias, mas aqui é só o dono do PVC de config).
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: seerr
+          image: ghcr.io/seerr-team/seerr:latest
+          env:
+            - name: TZ
+              value: "America/Sao_Paulo"
+            - name: LOG_LEVEL
+              value: "info"
+          ports:
+            - name: http
+              containerPort: 5055
+          volumeMounts:
+            # Path de config é /app/config (não /config) - confirmado na documentação
+            # oficial do Seerr; o path antigo do Jellyseerr não se aplica a esta imagem.
+            - name: config
+              mountPath: /app/config
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: seerr-pvc

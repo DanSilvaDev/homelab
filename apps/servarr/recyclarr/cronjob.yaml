@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: recyclarr-sync
+  namespace: media
+spec:
+  # Diário, 9h - perfis do TRaSH Guides não mudam com frequência, não precisa ser mais
+  # agressivo que isso. Ajustável sem impacto (Recyclarr é idempotente a cada sync).
+  # ajustado para o período da manhã, pois na madrugada os servidores são desligados
+  schedule: "0 9 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          # Imagem é rootless por padrão (usuário/grupo 1000:1000, mesma convenção do
+          # resto da stack) - confirmado na documentação oficial, sem suporte a PUID/PGID.
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          containers:
+            - name: recyclarr
+              # Tag `8` (major version) - projeto não publica tag `latest`.
+              image: ghcr.io/recyclarr/recyclarr:8
+              # `sync` roda uma sincronização única e sai (modo CLI) - sem args, a imagem
+              # sobe em modo daemon com scheduler próprio (CRON_SCHEDULE), que não
+              # queremos usar (o agendamento já é feito pelo CronJob do Kubernetes).
+              args: ["sync"]
+              env:
+                - name: RADARR_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: recyclarr-api-keys
+                      key: radarr-api-key
+                - name: SONARR_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: recyclarr-api-keys
+                      key: sonarr-api-key
+              volumeMounts:
+                # Só o arquivo de config é montado via ConfigMap (subPath) - o resto de
+                # /config (estado/log/cache do Recyclarr) fica no filesystem efêmero do
+                # próprio container, descartado a cada execução do Job (sync é idempotente,
+                # não precisa persistir nada entre execuções).
+                - name: config
+                  mountPath: /config/recyclarr.yml
+                  subPath: recyclarr.yml
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+          volumes:
+            - name: config
+              configMap:
+                name: recyclarr-config
