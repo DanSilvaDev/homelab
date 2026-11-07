@@ -4,13 +4,12 @@ metadata:
   name: flaresolverr-deployment
   namespace: media
 spec:
-  # 2 réplicas pra amenizar o impacto do vazamento de memória conhecido do
-  # upstream (ver nota no plan.md) - requests avulsos (request.get/post, o
-  # modo que o Prowlarr usa) são stateless e se distribuem bem entre pods via
-  # Service. Não usar mais réplicas que isso se algum dia passar a usar o
-  # modo "sessions" do FlareSolverr - uma sessão fica presa na réplica que
-  # a criou, uma segunda réplica não a enxerga.
-  replicas: 2
+  # Tentativa de rodar com 2 réplicas (pra amenizar o vazamento de memória
+  # conhecido do upstream - ver plan.md) revertida: dobrar o Chromium no
+  # mesmo node causou 500 InternalServerError do próprio FlareSolverr pro
+  # Prowlarr (sem folga de recursos suficiente). Voltou pra 1 réplica -
+  # ver "Tentativa de mitigação com replicas: 2 revertida" no plan.md.
+  replicas: 1
   selector:
     matchLabels:
       app: flaresolverr
