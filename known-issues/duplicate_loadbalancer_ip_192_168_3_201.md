@@ -9,7 +9,7 @@
 **Status**: 🔴 Não investigado/corrigido ainda.
 **Componente(s)**: `nginx` (namespace `default`, pré-existente), `kube-prometheus-stack-grafana` (namespace `monitoring`), Kube-VIP.
 **Identificado em**: não registrado explicitamente.
-**Relacionado**: [troubleshooting/pihole_dns_wrong_loadbalancer_ip.md](../troubleshooting/pihole_dns_wrong_loadbalancer_ip.md) (mesma classe de bug), [Observability - config.md](../clusters/observability/config.md).
+**Relacionado**: [troubleshooting/pihole_dns_wrong_loadbalancer_ip.md](../troubleshooting/pihole_dns_wrong_loadbalancer_ip.md) (mesma classe de bug), [Observability - config.md](../clusters/observability/config.md), [nginx_service_unidentified_usage.md](nginx_service_unidentified_usage.md) (se o `nginx` for confirmado órfão, removê-lo resolve este problema automaticamente).
 
 O `Service` `nginx` (namespace `default`) e o `kube-prometheus-stack-grafana` (namespace `monitoring`) estão ambos anotados com o mesmo `loadBalancerIP` (`192.168.3.201`).
 
@@ -24,7 +24,7 @@ Detalhe adicional do ambiente em [Observability - config.md](../clusters/observa
 **Status**: 🔴 Not yet investigated/fixed.
 **Component(s)**: `nginx` (namespace `default`, pre-existing), `kube-prometheus-stack-grafana` (namespace `monitoring`), Kube-VIP.
 **Identified on**: not explicitly recorded.
-**Related**: [troubleshooting/pihole_dns_wrong_loadbalancer_ip.md](../troubleshooting/pihole_dns_wrong_loadbalancer_ip.md) (same bug class), [Observability - config.md](../clusters/observability/config.md).
+**Related**: [troubleshooting/pihole_dns_wrong_loadbalancer_ip.md](../troubleshooting/pihole_dns_wrong_loadbalancer_ip.md) (same bug class), [Observability - config.md](../clusters/observability/config.md), [nginx_service_unidentified_usage.md](nginx_service_unidentified_usage.md) (if `nginx` is confirmed orphaned, removing it resolves this problem automatically).
 
 The `nginx` `Service` (namespace `default`) and `kube-prometheus-stack-grafana` (namespace `monitoring`) are both annotated with the same `loadBalancerIP` (`192.168.3.201`).
 

@@ -12,6 +12,8 @@ Quando uma ideia for implementada: a implementação real já gera seus próprio
 
 | Ideia | Componente | Data | Link |
 |---|---|---|---|
+| Limpeza automática de pastas `archived-*` no TrueNAS após 30 dias | TrueNAS, nfs-subdir-external-provisioner | 2026-11-08 | [truenas_archived_pvc_cleanup_automation.md](ideas/truenas_archived_pvc_cleanup_automation.md) |
+| HTTPS com certificado válido em todo o cluster, aposentando HTTP | Grafana, Prometheus, Alertmanager, ntfy, Pi-hole, media stack | 2026-11-08 | [cluster_wide_https_valid_certificates.md](ideas/cluster_wide_https_valid_certificates.md) |
 | Adicionar mais control-planes ao cluster (HA real de etcd) | control-plane, Kube-VIP, etcd | 2026-11-08 | [multi_control_plane_ha.md](ideas/multi_control_plane_ha.md) |
 | Streaming de jogos local via Moonlight/Sunshine | worker2 (GPU), media stack | 2026-11-08 | [game_streaming_moonlight_sunshine.md](ideas/game_streaming_moonlight_sunshine.md) |
 | Automação via Ansible do ciclo de desligar/religar workers + TrueNAS | worker1, worker2, TrueNAS, coredns-bypass | 2026-10-31 | [ansible_power_cycle_automation.md](ideas/ansible_power_cycle_automation.md) |
@@ -30,6 +32,8 @@ When an idea gets implemented: the actual implementation already generates its o
 
 | Idea | Component | Date | Link |
 |---|---|---|---|
+| Automatic cleanup of `archived-*` folders on TrueNAS after 30 days | TrueNAS, nfs-subdir-external-provisioner | 2026-11-08 | [truenas_archived_pvc_cleanup_automation.md](ideas/truenas_archived_pvc_cleanup_automation.md) |
+| Cluster-wide HTTPS with a valid certificate, retiring HTTP | Grafana, Prometheus, Alertmanager, ntfy, Pi-hole, media stack | 2026-11-08 | [cluster_wide_https_valid_certificates.md](ideas/cluster_wide_https_valid_certificates.md) |
 | Add more control-plane nodes to the cluster (real etcd HA) | control-plane, Kube-VIP, etcd | 2026-11-08 | [multi_control_plane_ha.md](ideas/multi_control_plane_ha.md) |
 | Local game streaming via Moonlight/Sunshine | worker2 (GPU), media stack | 2026-11-08 | [game_streaming_moonlight_sunshine.md](ideas/game_streaming_moonlight_sunshine.md) |
 | Ansible automation for the worker + TrueNAS shutdown/startup cycle | worker1, worker2, TrueNAS, coredns-bypass | 2026-10-31 | [ansible_power_cycle_automation.md](ideas/ansible_power_cycle_automation.md) |
