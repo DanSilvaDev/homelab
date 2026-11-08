@@ -23,7 +23,7 @@ spec:
           image: lscr.io/linuxserver/prowlarr:latest
           env:
             # PUID/PGID 1000:1000 - mesma convenção estabelecida na Fase 4
-            # pro qBittorrent (ver clusters/media-stack/plan.md). Prowlarr não
+            # pro qBittorrent (ver clusters/media-stack/config.md). Prowlarr não
             # monta a mídia (data/midias), então não precisa bater com o
             # ownership daquelas pastas, mas mantém consistência entre todos
             # os apps linuxserver.io da stack.

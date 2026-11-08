@@ -8,7 +8,7 @@
 
 **Status**: Ideia — não implementada.
 **Componente(s) relacionado(s)**: media stack (Jellyfin, `*arr`), ntfy — potencialmente outros serviços hoje expostos só na LAN (Grafana, Prometheus, Pi-hole).
-**Origem**: mencionada em `clusters/observability/config.md` (ntfy, 2026-10-27) e em `clusters/media-stack/plan.md` (acesso remoto à media stack, 2026-11-08).
+**Origem**: mencionada em `clusters/observability/config.md` (ntfy, 2026-10-27) e em `clusters/media-stack/config.md` (acesso remoto à media stack, 2026-11-08).
 
 Hoje todos os serviços do cluster são expostos só na LAN (`Service` tipo `LoadBalancer` via Kube-VIP + DNS local no Pi-hole). Acesso de fora de casa foi explicitamente deixado fora de escopo até validar o básico só na rede local.
 
@@ -29,7 +29,7 @@ A ideia é usar **Tailscale** (ou um reverse proxy equivalente) para habilitar a
 
 **Status**: Idea — not implemented.
 **Related component(s)**: media stack (Jellyfin, `*arr`), ntfy — potentially other services currently LAN-only (Grafana, Prometheus, Pi-hole).
-**Origin**: mentioned in `clusters/observability/config.md` (ntfy, 2026-10-27) and in `clusters/media-stack/plan.md` (media stack remote access, 2026-11-08).
+**Origin**: mentioned in `clusters/observability/config.md` (ntfy, 2026-10-27) and in `clusters/media-stack/config.md` (media stack remote access, 2026-11-08).
 
 Today every cluster service is exposed LAN-only (`LoadBalancer` `Service` via Kube-VIP + local DNS in Pi-hole). Access from outside the house was explicitly left out of scope until the basics are validated on the local network.
 

@@ -1,6 +1,6 @@
-# Media Stack (Jellyfin + *arr) - Plano de Implantação
+# Media Stack (Jellyfin + *arr) - Estado Atual
 
-**Status: Planejamento — nada implantado ainda.** Este arquivo documenta decisões e arquitetura antes da execução. Conforme as fases forem implantadas, promover o conteúdo relevante para um `config.md` normal (padrão dos outros `clusters/*/`), mantendo este `plan.md` só com o que ainda não foi feito.
+**Status: Implantada.** Todas as fases propostas foram concluídas (ver "Fases propostas" abaixo) — este arquivo documenta o estado atual da media stack (decisões, arquitetura, inventário de componentes), seguindo o mesmo padrão dos outros `clusters/*/config.md`. Pontos ainda em aberto (problemas não resolvidos e ideias futuras) não ficam aqui — ver [`known-issues.md`](../../known-issues.md) e [`ideas.md`](../../ideas.md) na raiz do projeto.
 
 Ver também: [TrueNAS - config.md](../truenas/config.md) | [Worker2 - config.md](../worker2/config.md) | [Observability - config.md](../observability/config.md)
 
@@ -154,11 +154,9 @@ kubectl create secret generic unpackerr-api-keys \
 
 - **Tentativa de mitigação com `replicas: 2` revertida (2026-11-07)**: rodar 2 réplicas (ideia: requests avulsos são stateless e se distribuem entre pods via Service, então uma OOM não derrubaria o serviço inteiro) causou o efeito oposto — Prowlarr passou a receber `500 InternalServerError` do próprio FlareSolverr (`HTTP request failed: [500:InternalServerError] [POST] at [http://flaresolverr:8191/v1]`, "indexer's server is unavailable"). Hipótese: 2 réplicas dobram a demanda de memória/CPU (cada uma sobe seu próprio Chromium) no mesmo node, e sem folga suficiente o Chromium passou a falhar ao subir durante requests — um dado a mais reforçando a suspeita de contenção de recursos no node, ver [known-issues: instabilidade geral da stack `*arr`](../../known-issues/arr_stack_general_instability.md). Revertido para `replicas: 1`.
 
-## Pendências / decisões ainda em aberto
+## Próximos passos
 
-Problemas ainda não resolvidos identificados durante a implantação da media stack foram migrados para [`known-issues.md`](../../known-issues.md) (índice de problemas ativos na raiz do repositório): DNS do `jellyfin.home`, IP duplicado `192.168.3.201`, zvol do worker2 não redimensionado, erro "Failed to Load Indexers from API" no Prowlarr, restarts frequentes do Jellyfin, e instabilidade geral da stack `*arr`.
-
-Itens já resolvidos (credenciais WireGuard do Gluetun, necessidade do FlareSolverr confirmada, `FailedMount` do provisioner NFS) foram removidos desta lista — já cobertos pelas seções "Fases propostas", "FlareSolverr" e pelo próprio histórico deste arquivo.
+Todas as fases propostas foram concluídas — não há próximos passos de implantação em aberto. Problemas identificados durante a implantação, ainda não resolvidos, estão em [`known-issues.md`](../../known-issues.md): DNS do `jellyfin.home`, IP duplicado `192.168.3.201`, zvol do worker2 não redimensionado, erro "Failed to Load Indexers from API" no Prowlarr, restarts frequentes do Jellyfin, e instabilidade geral da stack `*arr`. Melhorias futuras (fora do escopo original) estão em [`ideas.md`](../../ideas.md).
 
 ## Outros `*arr`/ferramentas do ecossistema (referência)
 

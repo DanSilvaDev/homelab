@@ -17,7 +17,7 @@ Pod do Jellyfin reiniciando com frequência anormal — **16 restarts em 35 hora
 
 - `kubectl describe pod` — motivo do último restart (`OOMKilled`, `CrashLoopBackOff`, liveness probe falhando, etc.).
 - `kubectl logs --previous` do container antes do restart.
-- Se os `limits` de CPU/memória (ver tabela de recursos da Fase 3 em [media-stack/plan.md](../clusters/media-stack/plan.md)) estão sendo estourados durante transcodificação via GPU.
+- Se os `limits` de CPU/memória (ver tabela de recursos da Fase 3 em [media-stack/config.md](../clusters/media-stack/config.md)) estão sendo estourados durante transcodificação via GPU.
 
 ---
 
@@ -34,4 +34,4 @@ The Jellyfin pod is restarting with abnormal frequency — **16 restarts in 35 h
 
 - `kubectl describe pod` — reason for the last restart (`OOMKilled`, `CrashLoopBackOff`, failing liveness probe, etc.).
 - `kubectl logs --previous` of the container before the restart.
-- Whether the CPU/memory `limits` (see the Phase 3 resources table in [media-stack/plan.md](../clusters/media-stack/plan.md)) are being exceeded during GPU transcoding.
+- Whether the CPU/memory `limits` (see the Phase 3 resources table in [media-stack/config.md](../clusters/media-stack/config.md)) are being exceeded during GPU transcoding.
