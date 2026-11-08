@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flaresolverr-deployment
+  namespace: media
+spec:
+  # Tentativa de rodar com 2 réplicas (pra amenizar o vazamento de memória
+  # conhecido do upstream - ver plan.md) revertida: dobrar o Chromium no
+  # mesmo node causou 500 InternalServerError do próprio FlareSolverr pro
+  # Prowlarr (sem folga de recursos suficiente). Voltou pra 1 réplica -
+  # ver "Tentativa de mitigação com replicas: 2 revertida" no plan.md.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flaresolverr
+  template:
+    metadata:
+      labels:
+        app: flaresolverr
+    spec:
+      # Imagem já roda como usuário não-root fixo (USER flaresolverr no próprio
+      # Dockerfile), mas por nome, não UID numérico - `runAsNonRoot: true` falha
+      # na admissão do pod porque o kubelet não consegue verificar estaticamente
+      # um usuário não-numérico ("container has runAsNonRoot and image has
+      # non-numeric user ... cannot verify user is non-root", confirmado
+      # 2026-11-07). Sem securityContext aqui - deixa a imagem usar seu próprio
+      # usuário padrão.
+      containers:
+        - name: flaresolverr
+          image: ghcr.io/flaresolverr/flaresolverr:latest
+          env:
+            - name: TZ
+              value: "America/Sao_Paulo"
+            - name: LOG_LEVEL
+              value: "info"
+          ports:
+            - name: http
+              containerPort: 8191
+          volumeMounts:
+            # Recomendação oficial do projeto: montar /tmp em tmpfs - cada
+            # request sobe um Chromium headless novo, que escreve arquivos
+            # temporários ali (10-30MB por request, descartado ao final).
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            # Mais generoso que o resto da stack de propósito: cada request
+            # sobe uma instância nova de Chromium headless (uso de memória
+            # alto por natureza, conforme aviso do próprio projeto). Limite
+            # ainda mais alto por causa de um vazamento de memória conhecido
+            # do upstream (processo chromedriver não é limpo corretamente
+            # entre requests - ver nota no plan.md) - isso só espaça os
+            # OOMKilled, não resolve a causa (bug na imagem, não na nossa
+            # config).
+            requests:
+              cpu: 100m
+              memory: 384Mi
+            limits:
+              cpu: 1000m
+              memory: 1536Mi
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi

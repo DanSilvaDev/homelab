@@ -1,0 +1,23 @@
+# PV estático (não dinâmico) apontando pro dataset data/midias do TrueNAS - precisamos
+# de um caminho previsível e compartilhado entre vários apps (Jellyfin RO, *arr/qBittorrent
+# RW nas próximas fases), não uma subpasta com nome auto-gerado como faz o provisionamento
+# dinâmico via nfs-subdir-external-provisioner. Também é pré-requisito pro hardlink
+# funcionar entre downloads/ e as pastas finais (movies/, tv/, etc) - hardlink só funciona
+# dentro do mesmo filesystem. Ver clusters/media-stack/plan.md.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: media-pv
+spec:
+  # Capacidade nominal, só usada pelo scheduler do k8s pra fazer o bind - o export NFS
+  # não impõe quota real (ver clusters/truenas/config.md, dataset midias: "sem quota").
+  capacity:
+    storage: 2Ti
+  accessModes:
+    - ReadWriteMany
+  # Retain, nunca Delete - isso aponta pra dados existentes/futuros da biblioteca de
+  # mídia; remover a PVC não deve apagar nada no TrueNAS.
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: 192.168.3.103
+    path: /mnt/data/midias

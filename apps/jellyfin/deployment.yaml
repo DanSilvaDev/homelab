@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin-deployment
+  namespace: media
+spec:
+  replicas: 1
+  # Recreate, não RollingUpdate - config (SQLite) fica num PVC ReadWriteOnce, dois pods
+  # escrevendo ao mesmo tempo durante um rollout corromperia o banco (mesmo padrão já
+  # usado no Pi-hole).
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: jellyfin
+  template:
+    metadata:
+      labels:
+        app: jellyfin
+    spec:
+      # Só roda no worker2 - único node com GPU (ver clusters/worker2/config.md).
+      nodeSelector:
+        gpu: "true"
+      containers:
+        - name: jellyfin
+          image: jellyfin/jellyfin:12.4
+          env:
+            - name: TZ
+              value: "America/Sao_Paulo"
+          ports:
+            - name: http
+              containerPort: 8096
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: cache
+              mountPath: /cache
+            - name: media
+              mountPath: /media
+              readOnly: true
+          resources:
+            # nvidia.com/gpu: "1" - um dos 2 slots liberados pelo time-slicing (ver
+            # infrastructure/nvidia-device-plugin/values.yaml); o outro fica com o
+            # dcgm-exporter. NVENC/NVDEC fica disponível automaticamente via o runtime
+            # nvidia do containerd (já configurado como default no worker2) - sem
+            # precisar de runtimeClassName nem mount manual de /dev, mesmo padrão já
+            # validado no pod de teste CUDA (ver worker2/config.md, "Validação final").
+            limits:
+              nvidia.com/gpu: "1"
+              cpu: "2"
+              memory: 4Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: jellyfin-pvc
+        - name: cache
+          persistentVolumeClaim:
+            claimName: jellyfin-cache-pvc
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-pvc

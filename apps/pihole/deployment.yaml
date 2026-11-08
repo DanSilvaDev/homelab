@@ -47,10 +47,10 @@ spec:
               containerPort: 443
               protocol: TCP
             - name: dns-udp
-              containerPort: 93
+              containerPort: 53
               protocol: UDP
             - name: dns-tcp
-              containerPort: 93
+              containerPort: 53
               protocol: TCP
           volumeMounts:
             - name: pihole-pv
@@ -60,7 +60,7 @@ spec:
             # Sem isso, o pod fica "Ready" mesmo com o DNS fora do ar e o
             # Service (ver core-dns/service.yaml) nunca faz failover pro coredns-bypass.
             tcpSocket:
-              port: 93
+              port: 53
             initialDelaySeconds: 10
             periodSeconds: 5
             timeoutSeconds: 3

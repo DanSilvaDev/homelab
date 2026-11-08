@@ -12,4 +12,4 @@ data:
   FTLCONF_database_maxDBdays: '7'
   FTLCONF_dhcp_active: "false"
   FTLCONF_dhcp_router: '192.168.3.1'
-  FTLCONF_dns_port: '93' 
+  FTLCONF_dns_port: '53' 

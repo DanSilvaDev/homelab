@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flaresolverr
+  namespace: media
+spec:
+  # ClusterIP, não LoadBalancer - diferente do resto da stack de propósito.
+  # O próprio projeto avisa explicitamente pra não expor o FlareSolverr na
+  # rede/internet (pode ser abusado como proxy anônimo). Só o Prowlarr fala
+  # com ele, via DNS interno do cluster (http://flaresolverr:8191).
+  type: ClusterIP
+  selector:
+    app: flaresolverr
+  ports:
+    - name: http
+      port: 8191
+      targetPort: 8191

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: seerr
+  namespace: media
+spec:
+  type: LoadBalancer
+  # IP fixo alocado pelo kube-vip-cloud-provider (range 192.168.3.200-254).
+  # .213 confirmado livre em 2026-11-07 via `kubectl get svc -A -o wide | grep -i loadbalancer`.
+  loadBalancerIP: 192.168.3.213
+  selector:
+    app: seerr
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5055

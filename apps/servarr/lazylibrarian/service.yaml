@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lazylibrarian
+  namespace: media
+spec:
+  type: LoadBalancer
+  # IP fixo alocado pelo kube-vip-cloud-provider (range 192.168.3.200-254).
+  # .211 confirmado livre em 2026-11-02 via
+  # `kubectl get svc -A -o wide | grep -i loadbalancer` antes de fixar
+  # (originalmente reservado pro Readarr, reaproveitado pro LazyLibrarian).
+  loadBalancerIP: 192.168.3.211
+  selector:
+    app: lazylibrarian
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5299

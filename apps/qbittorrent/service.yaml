@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: qbittorrent
+  namespace: media
+spec:
+  type: LoadBalancer
+  # IP fixo alocado pelo kube-vip-cloud-provider (range 192.168.3.200-254).
+  # .206 seria o próximo livre depois do Jellyfin (.202) - CONFIRMAR antes de
+  # aplicar com `kubectl get svc -A -o wide | grep -i loadbalancer` (mesmo
+  # processo usado antes de fixar o IP do Jellyfin), por causa do histórico de
+  # IPs duplicados neste cluster (ver troubleshooting/pihole_dns_wrong_loadbalancer_ip.md
+  # e a pendência do .201 nginx/grafana em clusters/observability/config.md).
+  loadBalancerIP: 192.168.3.206
+  selector:
+    app: qbittorrent
+  ports:
+    - name: webui
+      port: 80
+      targetPort: 8080

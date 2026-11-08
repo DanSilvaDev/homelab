@@ -1,0 +1,30 @@
+# nvdp/nvidia-device-plugin (nvidia-device-plugin-0.20.1) - expoe nvidia.com/gpu
+# como recurso alocavel pro Kubernetes. Unica GPU do cluster: GTX 970 (Maxwell)
+# no worker2. Instalado originalmente via `helm install` inline (ver
+# clusters/worker2/config.md, "Log de comandos executados") - este values.yaml
+# passa a ser a fonte da verdade pra upgrades futuros.
+#
+# nodeAffinity oculta do chart (exige um destes labels, normalmente setados por
+# NFD/GPU Operator, que nao usamos aqui): feature.node.kubernetes.io/pci-10de.present,
+# feature.node.kubernetes.io/cpu-model.vendor_id=NVIDIA, ou nvidia.com/gpu.present=true
+# (o escolhido manualmente - ver clusters/worker2/config.md e
+# troubleshooting/nvidia_device_plugin_nodeaffinity_requirement.md).
+nodeSelector:
+  gpu: "true"
+
+# Time-slicing: sem isso, nvidia.com/gpu: 1/1 ja fica 100% alocado so pelo
+# dcgm-exporter (que usa so uma fracao minima da GPU de verdade - so leitura de
+# metricas via NVML/DCGM, nenhum trabalho pesado). O modelo de device plugin do
+# Kubernetes e tudo-ou-nada, nao existe "acesso de leitura parcial" a GPU.
+# replicas: 2 faz o node anunciar 2 slots alocaveis na mesma GPU fisica
+# (dcgm-exporter + Jellyfin), sem precisar mexer na config do dcgm-exporter.
+# Ver clusters/media-stack/plan.md, secao "Por que GPU precisa de ajuste".
+config:
+  map:
+    default: |-
+      version: v1
+      sharing:
+        timeSlicing:
+          resources:
+          - name: nvidia.com/gpu
+            replicas: 2

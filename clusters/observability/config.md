@@ -45,11 +45,13 @@ O cluster usa `kube-vip-cloud-provider` com range de IPs `192.168.3.200-254` par
 
 | Serviço | IP | Porta | DNS local (Pi-hole) |
 |---|---|---|---|
-| Grafana | `192.168.3.201` | 80 | `dashboard.home` |
-| ~~Rancher~~ | ~~`192.168.3.202`~~ | — | Rancher removido em 2026-10-28, IP liberado para reuso futuro — ver [troubleshooting/rancher_removal_traefik_crd_conflict.md](../../troubleshooting/rancher_removal_traefik_crd_conflict.md) |
+| Grafana | `192.168.3.201` ⚠️ | 80 | `dashboard.home` |
+| Jellyfin | `192.168.3.202` | 80 (targetPort 8096) | `jellyfin.home` — ver [apps/jellyfin/](../../apps/jellyfin/) |
 | Prometheus | `192.168.3.203` | 80 (targetPort 9090) | `prometheus.home` |
 | Alertmanager | `192.168.3.204` | 80 (targetPort 9093) | `alert.home` |
 | ntfy | `192.168.3.205` | 80 | `ntfy.home` |
+
+⚠️ **`192.168.3.201` está duplicado** — o `Service` `nginx` (namespace `default`, pré-existente) também está anotado com esse mesmo IP (confirmado via `kubectl get svc -A -o wide` em 2026-11-02). Mesma classe de bug já documentada em [troubleshooting/pihole_dns_wrong_loadbalancer_ip.md](../../troubleshooting/pihole_dns_wrong_loadbalancer_ip.md) (dois `Service` não podem compartilhar um `loadBalancerIP` - o Kube-VIP atribui ao primeiro que pedir). Ainda não investigado/corrigido.
 
 > **Atenção de segurança**: Prometheus, Alertmanager e ntfy **não têm autenticação própria**. Aceitável dentro da LAN confiável de casa, mas nunca expor publicamente (ex: Cloudflare Tunnel) sem autenticação na frente.
 
@@ -105,7 +107,7 @@ Um único receiver (`notifications`) com dois canais, mais um receiver `"null"` 
 - Exposto só na LAN por enquanto (mesmo padrão dos outros serviços: LoadBalancer kube-vip + DNS local no Pi-hole) — push só chega com o celular na rede de casa. Migração pra Tailscale (acesso de qualquer lugar) é possível depois sem mudar o deployment do ntfy em si.
 - App ntfy no celular configurado com "Default server" apontando pro servidor próprio (`http://ntfy.home`), inscrito no tópico `homelab-alerts`.
 - O Alertmanager alcança o ntfy via DNS interno do cluster (`http://ntfy.monitoring.svc.cluster.local/homelab-alerts`), não pelo IP do LoadBalancer — não depende do Pi-hole nem da LAN pra esse tráfego interno.
-- **Limitação conhecida**: `webhook_configs` sempre manda o payload JSON fixo do Alertmanager como corpo da requisição (sem um template simples/suportado nesta versão, diferente do `telegram_configs`). O ntfy trata esse corpo cru como texto da notificação — funcional, mas não formatado. Possível melhoria futura: um pequeno serviço "tradutor" no meio do caminho.
+- **Formatação da mensagem (2026-11-07)**: `webhook_configs` manda o payload JSON fixo do Alertmanager como corpo da requisição (diferente do `telegram_configs`, que tem `message:` com template Go próprio). Em vez de um serviço "tradutor" no meio do caminho, a URL do webhook usa o parâmetro `?template=alertmanager` — um template pré-definido embutido no próprio ntfy desde a v2.10.0 (imagem usada é `v2.34.0`) que reconhece nativamente o schema do webhook do Alertmanager e renderiza título/mensagem formatados, sem precisar de nenhum template customizado nem config extra no servidor.
 
 ### Gotcha de configuração (Helm + Prometheus Operator)
 Ao sobrescrever `alertmanager.config.receivers`, é preciso reincluir manualmente o receiver `"null"` que o chart usa por padrão pro alerta `Watchdog` — o Helm substitui listas inteiras (não faz merge item a item), então uma lista `receivers` customizada apaga o `"null"` default, e a sub-rota (não sobrescrita) fica órfã, rejeitando a config inteira. Ver [troubleshooting/alertmanager_helm_receiver_list_replace.md](../../troubleshooting/alertmanager_helm_receiver_list_replace.md).
@@ -176,6 +178,7 @@ O dashboard oficial (grafana.com ID 12239) **não pôde ser importado pelo mecan
 - [x] Primeira regra de alerta nativa do Grafana versionada (`apps/grafana/alerts/alert_node_is_down.yaml`)
 - [ ] Configurar `grafana.sidecar.alerts` para provisionar `apps/grafana/alerts/` automaticamente (hoje é só export manual via UI)
 - [x] Remover o Rancher do cluster (conflito de CRD com Traefik) e desabilitar o Traefik — ver [troubleshooting/rancher_removal_traefik_crd_conflict.md](../../troubleshooting/rancher_removal_traefik_crd_conflict.md)
+- [x] `AlertmanagerFailedToSendAlerts` (2026-11-04/07) — causa raiz confirmada via `kubectl logs -n monitoring alertmanager-kube-prometheus-stack-alertmanager-0`: ntfy rejeitando com `400 invalid request: attachments not allowed` (payload JSON cru de grupos com vários alertas passando do limite de tamanho de mensagem do ntfy, caindo num fallback de anexo que falha porque anexos não estão habilitados no deployment do ntfy). Corrigido trocando o `webhook_configs` pra usar `?template=alertmanager` (ver "ntfy self-hosted" acima) — além de resolver o erro, deixa a notificação formatada (antes era o JSON cru ilegível). Aplicado via `helm upgrade` e validado (2026-11-07): alerta de teste chegou formatado no ntfy, sem erro de attachment no log do Alertmanager.
 
 ## Log de comandos executados
 
@@ -264,6 +267,20 @@ helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheu
 curl -i -H "Content-Type: application/json" \
   -d '[{"labels":{"alertname":"TesteHomelab","severity":"info"}}]' \
   http://192.168.3.204/api/v2/alerts
+
+# Fix: AlertmanagerFailedToSendAlerts - ntfy rejeitando com "attachments not allowed"
+# (webhook_configs passa a usar o template pre-definido alertmanager do proprio ntfy)
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  -f infrastructure/monitoring/values.yaml \
+  --version 92.13.1
+
+# Validacao: dispara alerta de teste de novo e confere se chega formatado no ntfy/celular,
+# sem erro de attachment no log do Alertmanager
+curl -i -H "Content-Type: application/json" \
+  -d '[{"labels":{"alertname":"TesteHomelab","severity":"info"}}]' \
+  http://192.168.3.204/api/v2/alerts
+kubectl logs -n monitoring alertmanager-kube-prometheus-stack-alertmanager-0 --tail=50
 
 # Loki + Grafana Alloy (logs)
 helm repo add grafana-community https://grafana-community.github.io/helm-charts

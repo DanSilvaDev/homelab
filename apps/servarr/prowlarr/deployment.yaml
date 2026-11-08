@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prowlarr-deployment
+  namespace: media
+spec:
+  replicas: 1
+  # Recreate, não RollingUpdate - config (SQLite) em PVC ReadWriteOnce, dois
+  # pods escrevendo ao mesmo tempo corromperia o banco (mesmo padrão já usado
+  # no Pi-hole/Jellyfin/qBittorrent).
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: prowlarr
+  template:
+    metadata:
+      labels:
+        app: prowlarr
+    spec:
+      containers:
+        - name: prowlarr
+          image: lscr.io/linuxserver/prowlarr:latest
+          env:
+            # PUID/PGID 1000:1000 - mesma convenção estabelecida na Fase 4
+            # pro qBittorrent (ver clusters/media-stack/plan.md). Prowlarr não
+            # monta a mídia (data/midias), então não precisa bater com o
+            # ownership daquelas pastas, mas mantém consistência entre todos
+            # os apps linuxserver.io da stack.
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "America/Sao_Paulo"
+          ports:
+            - name: http
+              containerPort: 9696
+          volumeMounts:
+            - name: config
+              mountPath: /config
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: prowlarr-pvc

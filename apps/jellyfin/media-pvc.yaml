@@ -1,0 +1,18 @@
+# PVC compartilhado, vinculado só ao media-pv estático (ver media-pv.yaml). O Jellyfin
+# monta isso readOnly: true (ver deployment.yaml); os apps *arr/qBittorrent das próximas
+# fases vão montar o MESMO PVC em RW - não é um PVC por app, é um só, compartilhado.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media-pvc
+  namespace: media
+spec:
+  accessModes:
+    - ReadWriteMany
+  # Vazio = bind só no PV estático (media-pv), nunca aciona um provisionador dinâmico
+  # por engano.
+  storageClassName: ""
+  volumeName: media-pv
+  resources:
+    requests:
+      storage: 2Ti

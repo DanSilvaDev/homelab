@@ -1,0 +1,177 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qbittorrent-deployment
+  namespace: media
+spec:
+  replicas: 1
+  # Recreate, não RollingUpdate - mesmo motivo do Jellyfin (config em PVC
+  # ReadWriteOnce, dois pods escrevendo ao mesmo tempo corromperia o estado).
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: qbittorrent
+  template:
+    metadata:
+      labels:
+        app: qbittorrent
+    spec:
+      # Sem nodeSelector de GPU de propósito - qBittorrent não precisa de GPU, e
+      # não faz sentido competir por CPU/disco local com o Jellyfin no worker2.
+      # Roda em qualquer node (dado fica no NFS, não preso a node nenhum).
+      #
+      # initContainer necessário pro WireGuard do Gluetun funcionar de verdade:
+      # sem `net.ipv4.conf.all.src_valid_mark=1`, o kernel descarta (reverse-path
+      # filter) os pacotes marcados pelo policy-routing do WireGuard assim que
+      # saem pela interface tun0 - o handshake de chaves completa normalmente
+      # (log do gluetun "parece" ok), mas nenhum dado real atravessa o túnel
+      # (sintoma observado: lookups de DNS e requests por IP dando timeout).
+      # Setar esse sysctl no host (worker2) não resolve - é um valor por network
+      # namespace, não herdado pelo netns do pod. Precisa ser setado dentro da
+      # mesma network namespace do pod. `/proc/sys` vem montado somente-leitura
+      # por padrão no container (independente de capability - NET_ADMIN sozinho
+      # não é suficiente pra escrever ali), então esse initContainer roda como
+      # `privileged: true` só pra remontar `/proc/sys` como leitura-escrita e
+      # aplicar o sysctl - dura frações de segundo e termina antes do gluetun
+      # subir. Alternativa mais "correta" seria o mecanismo nativo
+      # `securityContext.sysctls` do Kubernetes, mas esse sysctl específico não
+      # está na lista "safe" padrão e exigiria liberar `--allowed-unsafe-sysctls`
+      # no kubelet de um node específico + fixar o pod nele via nodeSelector -
+      # trade-off de segurança (privileged, mas só neste initContainer efêmero)
+      # por simplicidade (sem mexer em config de node nenhum do k3s).
+      initContainers:
+        - name: sysctl-fix
+          image: busybox:1.36
+          command: ["sh", "-c", "sysctl -w net.ipv4.conf.all.src_valid_mark=1"]
+          securityContext:
+            privileged: true
+      containers:
+        # Container da VPN - dono da interface de rede do pod. Como os dois
+        # containers deste pod compartilham a mesma network namespace (padrão
+        # do Kubernetes, diferente do docker-compose que exige
+        # "network_mode: service:gluetun" explícito), o qBittorrent sai pra
+        # internet através do túnel WireGuard automaticamente, sem config
+        # adicional nele.
+        - name: gluetun
+          image: qmcgaw/gluetun:latest
+          env:
+            # VPN_SERVICE_PROVIDER=custom (não "surfshark") de propósito - a
+            # seleção automática por SERVER_COUNTRIES usa a lista interna de
+            # servidores embutida no gluetun, que se mostrou desatualizada (os
+            # IPs que ela escolheu pro Brasil - 146.70.163.205 e 193.19.205.93
+            # - diferem dos IPs reais que `br-sao.prod.surfshark.com` resolve
+            # hoje - 146.70.163.211 e 138.199.58.35 - causando handshake que
+            # troca pacotes (confirmado via conntrack [ASSURED]) mas nunca
+            # fecha de verdade, provavelmente por chave pública desatualizada
+            # pro servidor errado). Modo custom aponta direto pro mesmo
+            # servidor+chave validados manualmente com o cliente oficial do
+            # WireGuard no Windows (mesmo arquivo .conf gerado no painel da
+            # Surfshark).
+            - name: VPN_SERVICE_PROVIDER
+              value: "custom"
+            - name: VPN_TYPE
+              value: "wireguard"
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gluetun-surfshark-credentials
+                  key: wireguard-private-key
+            - name: WIREGUARD_ADDRESSES
+              valueFrom:
+                secretKeyRef:
+                  name: gluetun-surfshark-credentials
+                  key: wireguard-addresses
+            - name: WIREGUARD_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gluetun-surfshark-credentials
+                  key: wireguard-public-key
+            - name: WIREGUARD_ENDPOINT_IP
+              valueFrom:
+                secretKeyRef:
+                  name: gluetun-surfshark-credentials
+                  key: wireguard-endpoint-ip
+            - name: WIREGUARD_ENDPOINT_PORT
+              value: "51820"
+            # Sem isso, o firewall do gluetun bloqueia a LAN de acessar a WebUI
+            # do qBittorrent (porta 8080) - só libera tráfego de saída pelo túnel.
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              value: "192.168.3.0/24"
+            - name: TZ
+              value: "America/Sao_Paulo"
+            # BLOCK_MALICIOUS=off: o Pi-hole já bloqueia anúncios/malware na
+            # rede, então essa camada duplicada do gluetun (que baixa listas
+            # pela própria VPN no boot) não é necessária aqui. Testado e
+            # descartado como causa isolada do loop de restart abaixo, mas
+            # mantido off por não ter motivo pra manter ligado.
+            - name: BLOCK_MALICIOUS
+              value: "off"
+            # Causa real do loop infinito de restart do VPN (mesmo com o
+            # servidor/chave corretos do fix acima): o alvo padrão do
+            # healthcheck usa hostnames (github.com/cloudflare.com), e esse
+            # lookup consistentemente falhava dentro da janela curta do
+            # healthcheck logo após cada restart "frio" do túnel - apesar de
+            # testes manuais (ping, nslookup via 127.0.0.1, wget) terem
+            # confirmado repetidamente que a VPN e o DNS funcionavam de
+            # verdade. Falso-negativo do healthcheck nesse ambiente
+            # específico, não conectividade real quebrada (ver troubleshooting
+            # doc da Fase 4 pra todo o processo de eliminação - CPU throttling
+            # e upstream DNS "plain" foram testados e descartados antes
+            # disso). Trocar o alvo pra um IP fixo (sem lookup de hostname)
+            # resolveu definitivamente - 0 restarts desde então.
+            - name: HEALTH_TARGET_ADDRESSES
+              value: "1.1.1.1:443"
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          volumeMounts:
+            - name: dev-net-tun
+              mountPath: /dev/net/tun
+          resources:
+            # limits.cpu subido de 250m pra 1: testado como hipótese pro loop
+            # de restart (gluetun reconstrói firewall + handshake + DNS-over-TLS
+            # + MTU a cada ciclo, e vários timeouts simultâneos - iptables-restore,
+            # TLS, DNS - sugeriam throttling), mas sozinho não resolveu (ver
+            # HEALTH_TARGET_ADDRESSES abaixo pra causa real). Mantido mais alto
+            # mesmo assim, como folga razoável pro trabalho de criptografia
+            # WireGuard + reconstrução de firewall do gluetun.
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 128Mi
+        - name: qbittorrent
+          image: lscr.io/linuxserver/qbittorrent:latest
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "America/Sao_Paulo"
+            - name: WEBUI_PORT
+              value: "8080"
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: media
+              mountPath: /media
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      volumes:
+        - name: dev-net-tun
+          hostPath:
+            path: /dev/net/tun
+        - name: config
+          persistentVolumeClaim:
+            claimName: qbittorrent-pvc
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-pvc

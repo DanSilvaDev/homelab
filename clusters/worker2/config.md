@@ -10,7 +10,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 ### Hardware
 - **CPU**: AMD FX-8350 (8 Cores, 8 Threads)
 - **Placa-mãe**: ASRock 990FX Extreme3
-- **Memória RAM**: 19GB DDR3 Non-ECC (valor corrigido em 2026-10-26; documentação anterior tinha 24GB por engano)
+- **Memória RAM**: 28GB DDR3 Non-ECC (+8GB instalados em 2026-11-02, totalizando 28GB; valor anterior de 19GB corrigido em 2026-10-26, documentação antes disso tinha 24GB por engano)
 - **GPU boot do host**: NVIDIA GeForce GT 210 (apenas para boot/console do TrueNAS)
 - **GPU passthrough**: NVIDIA GeForce GTX 970 (isolada via PCI passthrough, dedicada à VM worker2)
 
@@ -24,7 +24,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 
 ### Storage TrueNAS SCALE
 
-**Pool `ssd-apps`** (Stripe, SSD 120GB)
+**Pool `ssd-apps`** (Stripe, SSD 960GB — substituiu o SSD de 120GB em 2026-11-02; segundo SSD de 960GB para mirror previsto em breve)
 
 | Nome | Tipo | Tamanho/Recordsize | Compressão | Uso |
 |---|---|---|---|---|
@@ -32,11 +32,11 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 | `fast-data` | dataset | recordsize 128K | LZ4 | Storage rápido genérico (NFS), inclui pasta `os_images` com ISOs |
 | `databases` | dataset | recordsize 16K | LZ4 | Reservado para Postgres/Redis (recordsize ajustado ao page size) |
 
-**Pool `data`** (Stripe, HD WD Blue 1TB — upgrade futuro para IronWolf 4TB em Mirror)
+**Pool `data`** (Stripe, HD Seagate IronWolf 3TB — substituiu o WD Blue 1TB em 2026-11-02)
 
 | Nome | Compressão | Observação |
 |---|---|---|
-| `Midias` | off / lz4 | Armazenamento geral/mídias |
+| `midias` | off / lz4 | Biblioteca da media stack (Jellyfin + \*arr) — ver [TrueNAS - config.md](../truenas/config.md) |
 | `Backups` | ZSTD | Split futuro planejado em sub-datasets por fonte (ex. `smb-pc`, `nfs-k3s`) |
 
 ## VM worker2
@@ -48,13 +48,14 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 - Distro: Ubuntu Server 26.04.1
 - Variante de instalação: Minimized
 - Hostname: `worker2`
-- Kernel: 7.0.0-38-generic
+- Kernel: 7.0.0-42-generic (atualizado via `apt upgrade` em 2026-11-02; ver observação sobre módulo NVIDIA abaixo)
 - IP: `192.168.3.105/24` (DHCP + reserva por MAC no roteador — sem IP estático configurado na VM, por decisão deliberada)
 - Acesso SSH: por chave Ed25519 (`~/.ssh/id_ed25519_homelab` no host administrador), `PasswordAuthentication no`
 - Driver GPU: `nvidia-driver-580-server`
   - Versão instalada: `580.178.04` (confirmado via `nvidia-smi`)
   - Observação: branch 580 é a última com suporte a GPUs Maxwell (GTX 970/GM204); evitar upgrade para branch 590+
   - Todos os pacotes relacionados (`libnvidia-*-580-server`, `nvidia-driver-580-server`, `nvidia-kernel-*-580-server`, etc.) travados com `apt-mark hold`
+  - **Atenção**: esse hold também trava os pacotes de módulo de kernel versionados por ABI (`linux-modules-nvidia-580-server-<kernel>`, `linux-modules-nvidia-580-server-generic`). Como o kernel do host (`linux-image-generic`) não está em hold, qualquer `apt upgrade` que traga kernel novo deixa a GPU sem módulo carregável até o pacote `linux-modules-nvidia-580-server-$(uname -r)` correspondente ser instalado manualmente (mesma branch 580, sem pular pra 590+). **Checar isso antes de reiniciar a VM depois de qualquer `apt upgrade`.** Incidente documentado em [troubleshooting/worker2_nvidia_module_missing_after_kernel_upgrade.md](../../troubleshooting/worker2_nvidia_module_missing_after_kernel_upgrade.md).
 - NVIDIA Container Toolkit: `1.20.1` instalado
 
 ### CPU
@@ -64,7 +65,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 - CPU Mode: Host Model
 
 ### Memória
-- 10 GiB (reduzido de 12 GiB em 2026-10-26, após alertas de memory pressure no host TrueNAS — a RAM total do host é 19GB, não 24GB como documentado antes; 12 GiB alocados ao worker2 deixava pouca folga pro próprio TrueNAS + outros serviços. VM rebootada para aplicar.)
+- 12 GiB (aumentado de 10 GiB para 12 GiB em 2026-11-02, após o host TrueNAS receber +8GB de RAM, totalizando 28GB — folga suficiente agora pro TrueNAS + worker2. VM rebootada para aplicar. Histórico: reduzido de 12 GiB para 10 GiB em 2026-10-26 por alertas de memory pressure, quando o host tinha só 19GB.)
 
 ### Disco
 - Tipo: Existing zvol
@@ -131,6 +132,16 @@ O chart Helm `nvdp/nvidia-device-plugin` exige, além do `nodeSelector` customiz
 - `feature.node.kubernetes.io/pci-10de.present=true`
 - `feature.node.kubernetes.io/cpu-model.vendor_id=NVIDIA`
 - `nvidia.com/gpu.present=true` ← label escolhido manualmente (mais simples sem precisar instalar NFD/GPU Operator)
+
+### NVIDIA device plugin — time-slicing (2026-11-02)
+Habilitado `sharing.timeSlicing` com `replicas: 2` — sem isso, `nvidia.com/gpu: 1/1` já ficava 100% alocado só pelo `dcgm-exporter` (que usa só uma fração mínima da GPU de verdade, leitura de métricas via NVML/DCGM), e o modelo de device plugin do Kubernetes é tudo-ou-nada (sem "acesso de leitura parcial"). Agora o node anuncia **2 slots alocáveis** na mesma GPU física (confirmado via `kubectl describe node worker2 | grep -i "nvidia.com/gpu"` → `Capacity`/`Allocatable` = 2), liberando 1 slot pro Jellyfin sem mexer na config do `dcgm-exporter`. Values: `infrastructure/nvidia-device-plugin/values.yaml`. Aplicado via:
+```bash
+helm repo add nvdp https://nvidia.github.io/k8s-device-plugin
+helm repo update
+helm upgrade nvidia-device-plugin nvdp/nvidia-device-plugin \
+  --namespace nvidia-device-plugin \
+  -f infrastructure/nvidia-device-plugin/values.yaml
+```
 
 ### Nó no cluster
 - k3s version: `v1.36.5+k3s1` (igual ao control-plane; antes era requisito do Rancher, removido em 2026-10-28 — sem trava externa agora, mas mantido sem upgrade por ora)
@@ -203,4 +214,11 @@ kubectl describe node worker2 | grep -i "gpu"   # confirmado: nvidia.com/gpu em 
 kubectl apply -f gpu-test.yaml                  # pod CUDA n-body benchmark
 kubectl logs gpu-test                           # confirmado: 2550.474 GFLOP/s na GTX 970
 kubectl delete pod gpu-test test-gpu-selector   # limpeza dos pods de teste
+
+# Incidente 2026-11-02: módulo NVIDIA ausente após apt upgrade trazer kernel novo (7.0.0-38 -> 7.0.0-42)
+# Detalhes completos: troubleshooting/worker2_nvidia_module_missing_after_kernel_upgrade.md
+sudo apt install -y linux-modules-nvidia-580-server-7.0.0-42-generic linux-objects-nvidia-580-server-7.0.0-42-generic
+sudo depmod -a
+sudo modprobe nvidia
+nvidia-smi   # confirmado: driver 580.178.04 recarregado, GTX 970 reconhecida
 ```

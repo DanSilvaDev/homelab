@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unpackerr-deployment
+  namespace: media
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unpackerr
+  template:
+    metadata:
+      labels:
+        app: unpackerr
+    spec:
+      # golift/unpackerr não segue o padrão PUID/PGID do linuxserver.io - o
+      # próprio projeto roda como root por padrão e recomenda fixar o usuário
+      # via `--user`/securityContext em vez de env var (confirmado em
+      # unpackerr.zip, doc de instalação Docker). runAsUser/runAsGroup 1000
+      # é o equivalente em Kubernetes, mesma convenção de dono 1000:1000 do
+      # resto da stack em data/midias.
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: unpackerr
+          image: golift/unpackerr:latest
+          env:
+            # Sem UI web e sem arquivo de config - integração 100% via API
+            # e env vars (UN_<APP>_<indice>_*), sem precisar montar /config.
+            # Suporte oficial é só Sonarr/Radarr/Lidarr/Readarr - LazyLibrarian
+            # (que substituiu o Readarr nesta stack) fica de fora, não tem
+            # integração com o Unpackerr.
+            - name: UN_SONARR_0_URL
+              value: "http://sonarr:80"
+            - name: UN_SONARR_0_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: unpackerr-api-keys
+                  key: sonarr-api-key
+            # Mesmo path usado pelo Sonarr (volume "media" em /media) - o
+            # Unpackerr compara o path retornado pela API do Sonarr com o
+            # path local, então precisam ser idênticos dentro do container.
+            - name: UN_SONARR_0_PATHS_0
+              value: "/media/downloads"
+            - name: UN_RADARR_0_URL
+              value: "http://radarr:80"
+            - name: UN_RADARR_0_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: unpackerr-api-keys
+                  key: radarr-api-key
+            - name: UN_RADARR_0_PATHS_0
+              value: "/media/downloads"
+            - name: UN_LIDARR_0_URL
+              value: "http://lidarr:80"
+            - name: UN_LIDARR_0_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: unpackerr-api-keys
+                  key: lidarr-api-key
+            - name: UN_LIDARR_0_PATHS_0
+              value: "/media/downloads"
+          volumeMounts:
+            - name: media
+              mountPath: /media
+          resources:
+            # Sem recomendação oficial do projeto - estimativa nossa: workload
+            # é majoritariamente ocioso (poll/eventos de filesystem), com
+            # picos de CPU só durante a extração em si.
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 1000m
+              memory: 256Mi
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-pvc

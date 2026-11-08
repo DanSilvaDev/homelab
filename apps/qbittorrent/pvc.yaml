@@ -1,0 +1,14 @@
+# Config do qBittorrent (banco local de estado, sessões, etc.) - separado do PVC
+# de midia (media-pvc, compartilhado com Jellyfin e os apps *arr futuros).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qbittorrent-pvc
+  namespace: media
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: truenas-nfs-ssd
+  resources:
+    requests:
+      storage: 2Gi

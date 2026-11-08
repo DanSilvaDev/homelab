@@ -105,11 +105,16 @@ alertmanager:
               {{ end }}
         # ntfy self-hosted (apps/ntfy/), alcançado via DNS interno do cluster - o Alertmanager
         # roda dentro do cluster, não precisa sair pela LAN/kube-vip/Pi-hole pra chegar nele.
-        # Formato da mensagem: o webhook_configs sempre manda o JSON fixo do Alertmanager como
-        # corpo da requisição (sem template customizável de forma simples/suportada nesta
-        # versão) - o ntfy trata esse corpo cru como texto da notificação (funcional, não bonito).
+        # Formato da mensagem: `?template=alertmanager` usa o template pré-definido embutido
+        # do próprio ntfy (desde v2.10.0, imagem usada é v2.34.0) que entende nativamente o
+        # JSON do webhook do Alertmanager e renderiza título/mensagem formatados - sem isso,
+        # o webhook_configs manda o JSON cru como corpo, que o ntfy exibia como texto puro
+        # (ilegível) e, com grupos de vários alertas, chegava a estourar o limite de tamanho
+        # de mensagem e cair num fallback de anexo que falhava com "attachments not allowed"
+        # (anexos não habilitados no deployment do ntfy) - origem do alerta
+        # AlertmanagerFailedToSendAlerts (2026-11-07).
         webhook_configs:
-          - url: http://ntfy.monitoring.svc.cluster.local/homelab-alerts
+          - url: http://ntfy.monitoring.svc.cluster.local/homelab-alerts?template=alertmanager
             send_resolved: true
       # O Helm substitui a lista "receivers" inteira (não faz merge item a item), mas
       # mantém a sub-rota padrão do chart que direciona o alerta sintético "Watchdog"
