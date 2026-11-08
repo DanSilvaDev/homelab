@@ -12,6 +12,8 @@ Quando uma ideia for implementada: a implementação real já gera seus próprio
 
 | Ideia | Componente | Data | Link |
 |---|---|---|---|
+| Adicionar mais control-planes ao cluster (HA real de etcd) | control-plane, Kube-VIP, etcd | 2026-11-08 | [multi_control_plane_ha.md](ideas/multi_control_plane_ha.md) |
+| Streaming de jogos local via Moonlight/Sunshine | worker2 (GPU), media stack | 2026-11-08 | [game_streaming_moonlight_sunshine.md](ideas/game_streaming_moonlight_sunshine.md) |
 | Automação via Ansible do ciclo de desligar/religar workers + TrueNAS | worker1, worker2, TrueNAS, coredns-bypass | 2026-10-31 | [ansible_power_cycle_automation.md](ideas/ansible_power_cycle_automation.md) |
 | Acesso remoto via Tailscale (media stack, ntfy, outros serviços LAN-only) | media stack, ntfy | 2026-10-27 | [tailscale_remote_access.md](ideas/tailscale_remote_access.md) |
 | Suporte a Usenet (SABnzbd/NZBGet) como fonte de download adicional na media stack | media stack | 2026-11-08 | — |
@@ -28,6 +30,8 @@ When an idea gets implemented: the actual implementation already generates its o
 
 | Idea | Component | Date | Link |
 |---|---|---|---|
+| Add more control-plane nodes to the cluster (real etcd HA) | control-plane, Kube-VIP, etcd | 2026-11-08 | [multi_control_plane_ha.md](ideas/multi_control_plane_ha.md) |
+| Local game streaming via Moonlight/Sunshine | worker2 (GPU), media stack | 2026-11-08 | [game_streaming_moonlight_sunshine.md](ideas/game_streaming_moonlight_sunshine.md) |
 | Ansible automation for the worker + TrueNAS shutdown/startup cycle | worker1, worker2, TrueNAS, coredns-bypass | 2026-10-31 | [ansible_power_cycle_automation.md](ideas/ansible_power_cycle_automation.md) |
 | Remote access via Tailscale (media stack, ntfy, other LAN-only services) | media stack, ntfy | 2026-10-27 | [tailscale_remote_access.md](ideas/tailscale_remote_access.md) |
 | Usenet support (SABnzbd/NZBGet) as an additional download source for the media stack | media stack | 2026-11-08 | — |
