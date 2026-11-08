@@ -12,6 +12,7 @@ Quando uma ideia for implementada: a implementação real já gera seus próprio
 
 | Ideia | Componente | Data | Link |
 |---|---|---|---|
+| Avaliar GitHub Wiki vs. manter a documentação no repositório | README.md, ia/, troubleshooting.md, known-issues.md, ideas.md | 2026-11-08 | [github_wiki_vs_in_repo_docs.md](ideas/github_wiki_vs_in_repo_docs.md) |
 | Limpeza automática de pastas `archived-*` no TrueNAS após 30 dias | TrueNAS, nfs-subdir-external-provisioner | 2026-11-08 | [truenas_archived_pvc_cleanup_automation.md](ideas/truenas_archived_pvc_cleanup_automation.md) |
 | HTTPS com certificado válido em todo o cluster, aposentando HTTP | Grafana, Prometheus, Alertmanager, ntfy, Pi-hole, media stack | 2026-11-08 | [cluster_wide_https_valid_certificates.md](ideas/cluster_wide_https_valid_certificates.md) |
 | Adicionar mais control-planes ao cluster (HA real de etcd) | control-plane, Kube-VIP, etcd | 2026-11-08 | [multi_control_plane_ha.md](ideas/multi_control_plane_ha.md) |
@@ -32,6 +33,7 @@ When an idea gets implemented: the actual implementation already generates its o
 
 | Idea | Component | Date | Link |
 |---|---|---|---|
+| Evaluate GitHub Wiki vs. keeping docs in the repository | README.md, ia/, troubleshooting.md, known-issues.md, ideas.md | 2026-11-08 | [github_wiki_vs_in_repo_docs.md](ideas/github_wiki_vs_in_repo_docs.md) |
 | Automatic cleanup of `archived-*` folders on TrueNAS after 30 days | TrueNAS, nfs-subdir-external-provisioner | 2026-11-08 | [truenas_archived_pvc_cleanup_automation.md](ideas/truenas_archived_pvc_cleanup_automation.md) |
 | Cluster-wide HTTPS with a valid certificate, retiring HTTP | Grafana, Prometheus, Alertmanager, ntfy, Pi-hole, media stack | 2026-11-08 | [cluster_wide_https_valid_certificates.md](ideas/cluster_wide_https_valid_certificates.md) |
 | Add more control-plane nodes to the cluster (real etcd HA) | control-plane, Kube-VIP, etcd | 2026-11-08 | [multi_control_plane_ha.md](ideas/multi_control_plane_ha.md) |
