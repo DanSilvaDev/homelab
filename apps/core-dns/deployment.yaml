@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: coredns-bypass
-  namespace: default
+  namespace: dns-services
 spec:
   replicas: 1
   selector:
@@ -12,11 +12,7 @@ spec:
     metadata:
       labels:
         app: coredns-bypass
-        server: dns-provider # Veja core-dns/service.yaml: label compartilhada com o pi-hole
     spec:
-      # Aplica a prioridade mais baixa para dar preferência ao Pi-hole quando ele ligar
-      priorityClassName: dns-bypass-priority 
-      
       # Garante que o Pod só rode no Notebook (Control Plane).
       # nodeSelector exige igualdade exata de valor; como o valor real do
       # label não é garantidamente "" (ex: k3s/kubeadm usam "true"), usamos

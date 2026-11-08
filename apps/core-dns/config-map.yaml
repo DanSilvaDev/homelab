@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: coredns-bypass-config
-  namespace: default # mudar para networking no futuro junto com pi-hole
+  namespace: dns-services
 data:
   Corefile: |
     .:53 {
@@ -11,12 +11,28 @@ data:
         ready           # Ativa o plugin de prontidão para o readiness probe
         log             # Registra as consultas no terminal (bom para debug)
         reload          # Permite recarregar o arquivo se você alterá-lo sem reiniciar o Pod
-        
-        # O ENCAMINHAMENTO REAL:
-        # Tudo o que não for interno do cluster é enviado para a Cloudflare
-        forward . 1.1.1.1 1.1.1.2 {
+
+        # O Pi-hole (via Service ClusterIP interno pihole-dns) é o destino real -
+        # ad-blocking e registros .home. Cloudflare é só fallback.
+        # IP LITERAL de propósito (10.43.180.116, fixado em apps/pihole/dns-service.yaml):
+        # o plugin forward não resolve hostname/FQDN de Service, só aceita IP (ou
+        # /etc/resolv.conf) como upstream - usar o nome do Service aqui quebra com
+        # "not an IP address or file". Se o Service pihole-dns for recriado com outro
+        # clusterIP um dia, atualizar aqui também.
+        # "policy sequential" é ESSENCIAL aqui: sem isso o forward usa "random" por
+        # padrão e volta a dividir as consultas entre Pi-hole e Cloudflare mesmo com
+        # o Pi-hole saudável - mesma classe de bug já documentada em
+        # troubleshooting/pihole_dns_wrong_loadbalancer_ip.md (lá era round-robin de
+        # Service, aqui seria round-robin do forward; a raiz é a mesma: nada garantia
+        # que o Pi-hole fosse preferido). O health-check ativo do próprio plugin
+        # forward detecta o Pi-hole fora do ar e só aí cai pro Cloudflare - não
+        # depende mais de readinessProbe/Service compartilhado como antes.
+        forward . 10.43.180.116:53 1.1.1.1 1.1.1.2 {
+            policy sequential
+            max_fails 2
+            health_check 5s
             max_concurrent 1000
         }
-        
+
         cache 30        # Guarda as respostas em cache por 30 segundos para economizar banda
     }

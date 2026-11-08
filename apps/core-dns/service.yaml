@@ -2,23 +2,15 @@ apiVersion: v1
 kind: Service
 metadata:
   name: dns-service-lb
-  namespace: default
+  namespace: dns-services
   annotations:
-    # Único Service pedindo este IP ao Kube-VIP. Antes, pihole-svc (so HTTP)
-    # e este Service (so DNS) pediam o MESMO loadbalancerIP cada um no seu
-    # proprio objeto Service - o Kube-VIP nao divide um IP entre dois
-    # Services distintos: o segundo pedido e silenciosamente realocado pro
-    # proximo IP livre do pool (foi parar em .202, nao .200). Unificado num
-    # so Service (HTTP + DNS, mesmo selector) pra eliminar essa disputa.
-    # Ver troubleshooting/pihole_dns_wrong_loadbalancer_ip.md
+    # Único Service pedindo este IP ao Kube-VIP (ver histórico do bug de IP
+    # duplicado em troubleshooting/pihole_dns_wrong_loadbalancer_ip.md - isso
+    # continua valendo, não crie outro Service pedindo este mesmo IP).
     kube-vip.io/loadbalancerIP: "192.168.3.200"
 spec:
   type: LoadBalancer
   ports:
-  - name: http
-    port: 80
-    protocol: TCP
-    targetPort: 80
   - name: dns-udp
     port: 53
     protocol: UDP
@@ -28,9 +20,15 @@ spec:
     protocol: TCP
     targetPort: 53
   selector:
-    # IMPORTANTE: Esta label deve existir tanto no Pod do Pi-hole
-    # quanto no Pod do coredns-bypass para o Kube-VIP unificar o tráfego.
-    # A porta 80 so responde quando o pod ativo e o Pi-hole (coredns-bypass
-    # nao expoe HTTP) - aceitavel, a UI de admin nao precisa funcionar
-    # durante o failover de DNS.
-    server: dns-provider
+    # Só o coredns-bypass - ele é o único listener real de DNS agora (ver
+    # core-dns/config-map.yaml). O Pi-hole deixou de ser um backend direto
+    # deste Service: antes os dois pods compartilhavam a label `server:
+    # dns-provider` e o kube-proxy fazia round-robin cego entre eles sempre
+    # que ambos estavam Ready (o que é o estado normal, não só durante
+    # failover) - isso fazia consultas .home falharem intermitentemente
+    # mesmo com tudo saudável. Agora o CoreDNS encaminha pro Pi-hole via
+    # Service interno (apps/pihole/dns-service.yaml) com failover de
+    # verdade (health-check do plugin forward), não via Service/Endpoints
+    # compartilhado. A UI do Pi-hole (porta 80) tem seu próprio Service -
+    # ver apps/pihole/service.yaml.
+    app: coredns-bypass

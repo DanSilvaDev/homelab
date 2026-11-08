@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pihole-ui
+  namespace: dns-services
+spec:
+  type: LoadBalancer
+  # IP fixo alocado pelo kube-vip-cloud-provider (range 192.168.3.200-254).
+  # Próximo IP livre do pool no momento da criação (2026-11-08) - ver
+  # clusters/observability/config.md pra tabela de IPs já alocados.
+  # Não é mais 192.168.3.200 (esse IP agora é só do coredns-bypass/DNS, ver
+  # apps/core-dns/service.yaml) - se houver um registro Local DNS no Pi-hole
+  # apontando o hostname da própria UI pro .200, atualizar pra este IP.
+  loadBalancerIP: 192.168.3.214
+  selector:
+    app: pihole-app
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 80
