@@ -1,5 +1,5 @@
 # Config PVC do Jellyfin (metadata, SQLite, thumbnails, etc) - separado do media-pvc,
-# que é só a biblioteca de mídia. Ver clusters/media-stack/plan.md, tabela "Config PVCs".
+# que é só a biblioteca de mídia. Ver clusters/media-stack/config.md, tabela "Config PVCs".
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

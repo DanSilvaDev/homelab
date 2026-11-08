@@ -1,0 +1,7 @@
+# Namespace dedicado pro Pi-hole + coredns-bypass (antes rodavam em `default`).
+# Essa separação já estava planejada - ver histórico do comentário em
+# apps/core-dns/config-map.yaml antes desta mudança.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dns-services

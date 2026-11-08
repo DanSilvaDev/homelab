@@ -1,0 +1,46 @@
+# Pod temporário pra migrar os dados do Pi-hole de `default` pro namespace
+# `dns-services` (ver clusters/observability/config.md ou troubleshooting
+# relacionado pro contexto da mudança). Diferente do data-migration-pod.yaml
+# original (hostPath -> NFS), aqui os dois lados já são NFS, só em namespaces
+# diferentes - um Pod só pode montar PVC do seu próprio namespace, então
+# montamos os dois caminhos NFS diretamente (bypass do PVC), sem precisar do
+# provisioner pra nada além de já ter criado o diretório novo (vazio).
+#
+# Uso: aplique com `kubectl apply -f`, acompanhe com `kubectl logs -f
+# pihole-namespace-migration` até aparecer "MIGRATION_DONE", valide com
+# `kubectl exec pihole-namespace-migration -- diff -rq /source /dest`, e só
+# então delete o pod.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pihole-namespace-migration
+  namespace: default
+spec:
+  restartPolicy: Never
+  containers:
+    - name: migrate
+      image: alpine:3.20
+      command: ["sh", "-c", "cp -a /source/. /dest/ && echo MIGRATION_DONE && sleep 3600"]
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi
+      volumeMounts:
+        - name: source
+          mountPath: /source
+          readOnly: true
+        - name: dest
+          mountPath: /dest
+  volumes:
+    - name: source
+      nfs:
+        server: 192.168.3.103
+        path: /mnt/ssd-apps/k8s/default-pihole-pvc-pvc-b2a00502-b8cf-4c8f-bfa3-f2bbdc578379
+        readOnly: true
+    - name: dest
+      nfs:
+        server: 192.168.3.103
+        path: /mnt/ssd-apps/k8s/dns-services-pihole-pvc-pvc-34386b6b-3fbb-4546-b3c3-aa8df8e29dae

@@ -1,7 +1,7 @@
 # Namespace dedicado pra toda a media stack (Jellyfin + as peças futuras: Prowlarr,
 # Sonarr, Radarr, Lidarr, Readarr, Bazarr, Jellyseerr, qBittorrent/Gluetun, Unpackerr,
 # Recyclarr) - mesmo padrão de segmentação já usado pro `monitoring`. Ver
-# clusters/media-stack/plan.md.
+# clusters/media-stack/config.md.
 apiVersion: v1
 kind: Namespace
 metadata:

@@ -18,7 +18,7 @@ nodeSelector:
 # Kubernetes e tudo-ou-nada, nao existe "acesso de leitura parcial" a GPU.
 # replicas: 2 faz o node anunciar 2 slots alocaveis na mesma GPU fisica
 # (dcgm-exporter + Jellyfin), sem precisar mexer na config do dcgm-exporter.
-# Ver clusters/media-stack/plan.md, secao "Por que GPU precisa de ajuste".
+# Ver clusters/media-stack/config.md, secao "Por que GPU precisa de ajuste".
 config:
   map:
     default: |-

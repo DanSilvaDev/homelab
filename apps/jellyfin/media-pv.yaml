@@ -3,7 +3,7 @@
 # RW nas próximas fases), não uma subpasta com nome auto-gerado como faz o provisionamento
 # dinâmico via nfs-subdir-external-provisioner. Também é pré-requisito pro hardlink
 # funcionar entre downloads/ e as pastas finais (movies/, tv/, etc) - hardlink só funciona
-# dentro do mesmo filesystem. Ver clusters/media-stack/plan.md.
+# dentro do mesmo filesystem. Ver clusters/media-stack/config.md.
 apiVersion: v1
 kind: PersistentVolume
 metadata:

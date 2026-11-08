@@ -22,7 +22,7 @@ spec:
           image: lscr.io/linuxserver/radarr:latest
           env:
             # PUID/PGID 1000:1000 - mesma convenção da Fase 4 (ver
-            # clusters/media-stack/plan.md). Precisa bater com o dono das
+            # clusters/media-stack/config.md). Precisa bater com o dono das
             # pastas em data/midias pro Radarr conseguir mover/criar
             # hardlinks de downloads/ pra movies/.
             - name: PUID
