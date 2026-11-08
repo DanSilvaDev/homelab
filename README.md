@@ -46,6 +46,12 @@ infrastructure/            Configuração de ferramentas de infraestrutura do cl
 troubleshooting/           Post-mortems de problemas reais já diagnosticados e resolvidos
   *.md                       Um arquivo por problema, seguindo um padrão fixo (ver ia/skills/)
 
+troubleshooting.md         Índice bilíngue de troubleshooting/ (tabela: arquivo, data, componente, tags, resumo)
+known-issues.md            Índice bilíngue de problemas ativos, ainda não resolvidos
+known-issues/              Um arquivo por problema ativo que precisa de mais contexto que uma linha de tabela
+ideas.md                   Índice bilíngue do backlog de ideias/melhorias futuras ainda não implementadas
+ideas/                     Um arquivo por ideia que já precisa de mais contexto/arquitetura (equivalente a um plan.md antes da implementação)
+
 ia/                        Contexto e ferramentas para agentes de IA trabalharem neste repositório
   CLAUDE.md                  Contexto geral do projeto (topologia, convenções, onde olhar primeiro)
   skills/                    Skills reutilizáveis específicas deste projeto
@@ -61,14 +67,16 @@ ia/                        Contexto e ferramentas para agentes de IA trabalharem
 ### Convenções
 
 - **`clusters/*/config.md`**: documentam o **estado atual** de cada nó/host (hardware, configuração, versões, log de comandos executados). Atualizados incrementalmente conforme o ambiente muda — são a fonte da verdade mais atual de cada componente.
-- **`troubleshooting/*.md`**: documentam **problemas já resolvidos** (sintomas → causa raiz → diagnóstico → correção → lições aprendidas), para evitar re-investigar o mesmo problema no futuro.
+- **`troubleshooting/*.md`**: documentam **problemas já resolvidos** (sintomas → causa raiz → diagnóstico → correção → lições aprendidas), para evitar re-investigar o mesmo problema no futuro. Indexados em [`troubleshooting.md`](troubleshooting.md).
+- **`known-issues.md` / `known-issues/`**: problemas já identificados mas **ainda não resolvidos**. Quando resolvidos, viram um documento em `troubleshooting/` e saem daqui.
+- **`ideas.md` / `ideas/`**: backlog de ideias/melhorias futuras ainda não implementadas. Quando implementadas, a entrada é removida (o trabalho real já gera seus próprios arquivos/PR).
 - **`ia/`**: ponto de entrada de contexto para agentes de IA (Claude ou outros) que forem trabalhar neste repo — comece por `ia/CLAUDE.md`.
 
 ### Gerenciamento de energia
 
 Os servidores worker (worker1, worker2) **e também o host TrueNAS** serão desligados durante a madrugada para economizar energia — o control-plane permanece ligado 24/7 (hospeda o Kube-VIP e a API do cluster). O Pi-hole tem anti-afinidade explícita com o control-plane (ver `apps/pihole/deployment.yaml`): como seu PVC é servido via NFS pelo TrueNAS, ele ficaria inutilizável de qualquer forma com o TrueNAS desligado, então não faz sentido deixá-lo rodar no control-plane só pra ficar travado esperando o storage voltar — ele simplesmente fica indisponível junto com os workers. Para a rede doméstica não perder resolução de DNS nesse período, o **coredns-bypass** (`apps/core-dns/`) roda permanentemente no control-plane como fallback: ele assume o mesmo IP flutuante do Kube-VIP (`192.168.3.200`) sempre que o Pi-hole fica `NotReady` (via `readinessProbe` na porta de DNS), oferecendo resolução básica (sem ad-blocking, encaminhando direto pra Cloudflare) até os workers e o TrueNAS voltarem a ligar.
 
-A automação do ciclo de desligar/religar os workers via **Ansible** está planejada, mas ainda não implementada.
+A automação do ciclo de desligar/religar os workers via **Ansible** ainda não existe — ver [ideias futuras: automação Ansible do ciclo de energia](ideas/ansible_power_cycle_automation.md).
 
 ### Status
 
@@ -118,6 +126,12 @@ infrastructure/            Cluster infrastructure tooling configuration
 troubleshooting/           Post-mortems of real issues already diagnosed and resolved
   *.md                       One file per issue, following a fixed template (see ia/skills/)
 
+troubleshooting.md         Bilingual index of troubleshooting/ (table: file, date, component, tags, summary)
+known-issues.md            Bilingual index of active, not-yet-resolved problems
+known-issues/              One file per active problem that needs more context than a table row
+ideas.md                   Bilingual index of the future ideas/improvements backlog, not yet implemented
+ideas/                     One file per idea that already needs more context/architecture (same role a plan.md plays before implementation)
+
 ia/                        Context and tooling for AI agents working in this repository
   CLAUDE.md                  General project context (topology, conventions, where to look first)
   skills/                    Project-specific reusable skills
@@ -133,14 +147,16 @@ ia/                        Context and tooling for AI agents working in this rep
 ### Conventions
 
 - **`clusters/*/config.md`**: document the **current state** of each node/host (hardware, configuration, versions, executed command log). Updated incrementally as the environment changes — they are the most up-to-date source of truth for each component.
-- **`troubleshooting/*.md`**: document **already-resolved issues** (symptoms → root cause → diagnosis → fix → lessons learned), to avoid re-investigating the same problem in the future.
+- **`troubleshooting/*.md`**: document **already-resolved issues** (symptoms → root cause → diagnosis → fix → lessons learned), to avoid re-investigating the same problem in the future. Indexed in [`troubleshooting.md`](troubleshooting.md).
+- **`known-issues.md` / `known-issues/`**: problems already identified but **not yet resolved**. Once resolved, they become a `troubleshooting/` document and leave here.
+- **`ideas.md` / `ideas/`**: backlog of future ideas/improvements not yet implemented. Once implemented, the entry is removed (the actual implementation already generates its own files/PR).
 - **`ia/`**: entry point for AI agent context (Claude or others) working on this repo — start with `ia/CLAUDE.md`.
 
 ### Power management
 
 The worker servers (worker1, worker2) **and the TrueNAS host** will be shut down overnight to save power — the control-plane stays on 24/7 (it hosts Kube-VIP and the cluster API). Pi-hole has explicit anti-affinity against the control-plane (see `apps/pihole/deployment.yaml`): since its PVC is served over NFS by TrueNAS, it would be unusable anyway once TrueNAS is off, so there's no point letting it run on the control-plane just to sit stuck waiting on storage that isn't there — it simply goes down along with the workers. To keep DNS resolution working for the home network during that window, **coredns-bypass** (`apps/core-dns/`) runs permanently on the control-plane as a fallback: it takes over the same Kube-VIP floating IP (`192.168.3.200`) whenever Pi-hole goes `NotReady` (via a `readinessProbe` on the DNS port), providing basic resolution (no ad-blocking, forwarded straight to Cloudflare) until the workers and TrueNAS power back on.
 
-Automating the worker shutdown/startup cycle via **Ansible** is planned but not yet implemented.
+Automating the worker shutdown/startup cycle via **Ansible** doesn't exist yet — see [future ideas: Ansible power cycle automation](ideas/ansible_power_cycle_automation.md).
 
 ### Status
 

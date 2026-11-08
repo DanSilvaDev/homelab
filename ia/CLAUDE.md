@@ -22,6 +22,11 @@ apps/
   core-dns/               -> CoreDNS fallback que assume o IP do Pi-hole via Kube-VIP (ver seção "Gerenciamento de energia" abaixo)
 troubleshooting/
   *.md                    -> post-mortems de problemas reais já resolvidos (ver convenção abaixo)
+troubleshooting.md        -> índice bilíngue de troubleshooting/ (tabela: arquivo, data, componente, tags, resumo)
+known-issues.md           -> índice bilíngue de problemas ativos, ainda não resolvidos
+known-issues/             -> um arquivo por problema ativo que precisa de mais contexto que uma linha de tabela
+ideas.md                  -> índice bilíngue do backlog de ideias/melhorias futuras ainda não implementadas
+ideas/                    -> um arquivo por ideia que já precisa de mais contexto/arquitetura (equivalente a um plan.md antes da implementação)
 ia/
   CLAUDE.md               -> este arquivo
   skills/                 -> skills reutilizáveis para agentes de IA trabalharem neste repo
@@ -40,10 +45,12 @@ Antes de propor mudanças de infraestrutura, **sempre leia primeiro** `clusters/
 ## Convenções importantes
 
 1. **Documentação de estado** (`clusters/*/config.md`): formato Markdown, atualizado incrementalmente conforme mudanças são feitas — nunca reescrito do zero. Sempre mantenha o checklist de "Próximos passos" e o "Log de comandos executados" sincronizados com a realidade.
-2. **Documentação de troubleshooting** (`troubleshooting/*.md`): post-mortems de problemas não-óbvios já resolvidos, seguindo uma estrutura fixa (cenário/sintomas → investigação/causa raiz → comandos de diagnóstico → correção → lições aprendidas). Ver a skill `create-troubleshooting-doc` em `ia/skills/` para o template exato e quando usá-la.
+2. **Documentação de troubleshooting** (`troubleshooting/*.md`): post-mortems de problemas não-óbvios já resolvidos, seguindo uma estrutura fixa (cenário/sintomas → investigação/causa raiz → comandos de diagnóstico → correção → lições aprendidas). Ver a skill `create-troubleshooting-doc` em `ia/skills/` para o template exato e quando usá-la. Indexados em [`troubleshooting.md`](../troubleshooting.md).
 3. **Versões de k3s**: sem o Rancher, não há mais trava externa de minor version — mas ainda confirme compatibilidade (chart versions, drivers) antes de sugerir upgrades.
 4. **Branch de driver NVIDIA**: a GTX 970 (Maxwell) só é suportada até a branch `580` do driver NVIDIA — não sugerir upgrade para branches `590+` nesse hardware.
 5. **Manter os nodes limpos/neutros**: o objetivo é manter os nodes do cluster o mais parecidos possível entre si, com o mínimo de diferenças — só o que é realmente necessário pro funcionamento correto fica instalado permanentemente. Quando um pacote for instalado num node (via `apt install` ou similar) só para ajudar a diagnosticar um problema (ex: `conntrack`, `tcpdump`), ao final da investigação — quando a causa raiz for encontrada e resolvida — liste explicitamente quais pacotes foram instalados e em quais nodes, e sugira a desinstalação deles. A decisão de manter ou remover é sempre do operador (nunca desinstalar automaticamente sem confirmação), mas a sugestão deve ser feita proativamente, não só se perguntado.
+6. **Problemas ativos** (`known-issues.md` / `known-issues/`): problemas já identificados mas **ainda não resolvidos** — diferente de `troubleshooting/`, que só documenta o que já foi resolvido. Ao identificar um problema não-trivial que não será resolvido na mesma sessão, use a skill `create-known-issue` para registrá-lo. Quando o problema for resolvido, use a skill `create-troubleshooting-doc` para escrever o post-mortem em `troubleshooting/`, adicione a linha em `troubleshooting.md`, e **remova** a entrada/arquivo de `known-issues.md`/`known-issues/`.
+7. **Ideias futuras** (`ideas.md` / `ideas/`): backlog de ideias/melhorias que surgem durante implementação ou uso, mas que não serão implementadas na sessão atual. Use a skill `create-idea` para registrar. Quando implementada, a ideia **sai** do backlog (a implementação real já gera seus próprios arquivos/PR) — não mantenha histórico de ideias implementadas aqui.
 
 ## Gerenciamento de energia (em andamento)
 
@@ -53,12 +60,14 @@ O Pi-hole, por sua vez, tem **anti-afinidade explícita** contra o control-plane
 
 - `coredns-bypass` e `pihole-deployment` compartilham a label `server: dns-provider`, selecionada pelo Service `dns-service-lb` (`apps/core-dns/service.yaml`), fixo no IP do Kube-VIP `192.168.3.200`. Esse Service também expõe a porta 80 (UI de admin do Pi-hole) — é o único Service que pede esse IP ao Kube-VIP (ver `troubleshooting/pihole_dns_wrong_loadbalancer_ip.md`: dois `Service` distintos pedindo o mesmo `loadbalancerIP` não dividem o IP, o segundo é realocado silenciosamente para outro IP do pool).
 - O failover depende do `readinessProbe` do Pi-hole (porta 93/TCP): quando ele fica `NotReady` (workers/TrueNAS desligados ou Pi-hole fora do ar), o Service passa a rotear só pro `coredns-bypass`, que faz apenas forward puro pra Cloudflare (sem ad-blocking, sem registros locais).
-- **Não é só um bypass de DNS** — é parte de um plano maior de economia de energia, onde workers e TrueNAS saem do ar junto. Automação do ciclo desligar/religar via **Ansible** ainda não existe neste repositório; se for implementada, provavelmente precisará coordenar com esse mecanismo de failover (ex: desligar TrueNAS/workers só depois de confirmar o failover do DNS, religar o Pi-hole só depois do TrueNAS/NFS já estarem de volta).
+- **Não é só um bypass de DNS** — é parte de um plano maior de economia de energia, onde workers e TrueNAS saem do ar junto. Automação do ciclo desligar/religar via **Ansible** ainda não existe neste repositório — ver [ideias futuras: automação Ansible do ciclo de energia](../ideas/ansible_power_cycle_automation.md) para o raciocínio de coordenação com esse mecanismo de failover.
 
 ## Diretório `ia/skills/`
 
 Contém skills reutilizáveis específicas deste projeto. Para que uma skill seja carregável automaticamente pelo Claude Code via `Skill` tool, ela também precisa estar referenciada em `.claude/skills/` (ou um link/cópia lá) — os arquivos aqui em `ia/skills/` servem como fonte versionada junto ao projeto, mas podem precisar ser copiados/linkados para o diretório de configuração do Claude Code para serem auto-descobertos.
 
 **Skills atualmente espelhadas em `.claude/skills/`** (mantenha as duas cópias em sincronia ao editar):
-- `create-troubleshooting-doc` → espelhada em `.claude/skills/create-troubleshooting-doc/SKILL.md`
+- `create-troubleshooting-doc` → espelhada em `.claude/skills/create-troubleshooting-doc/SKILL.md` (também cobre a promoção de `known-issues/` para `troubleshooting/`)
 - `create-pull-request` → espelhada em `.claude/skills/create-pull-request/SKILL.md` (usa o template `.github/PULL_REQUEST_TEMPLATE.md`)
+- `create-idea` → espelhada em `.claude/skills/create-idea/SKILL.md` (registra uma ideia nova em `ideas.md`/`ideas/`)
+- `create-known-issue` → espelhada em `.claude/skills/create-known-issue/SKILL.md` (registra um problema ativo, ainda não resolvido, em `known-issues.md`/`known-issues/`)

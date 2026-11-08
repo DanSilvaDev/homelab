@@ -16,6 +16,8 @@ Use esta skill quando, durante a sessão, você (o agente) tiver:
 
 Não use para documentar simples decisões de configuração (isso vai nos `config.md` de cada `clusters/<nome>/`), nem para passos de instalação padrão sem nenhuma descoberta não-óbvia envolvida.
 
+Se o problema já estava registrado como ativo em [`known-issues.md`](../../../known-issues.md) / `known-issues/` (ver skill `create-known-issue`), resolvê-lo é justamente o gatilho para usar esta skill — ver "Passo 4" sobre como promover o registro.
+
 ## Passo 1: Determine o nome do arquivo
 
 - Caminho: `troubleshooting/<nome_descritivo>.md` — **um único arquivo**, não um arquivo por idioma.
@@ -163,5 +165,7 @@ O arquivo tem um cabeçalho curto com os links de âncora (mesmo padrão do `REA
 
 ## Passo 4: Depois de criar
 
+- **Atualize o índice [`troubleshooting.md`](../../../troubleshooting.md)** (raiz do projeto): adicione uma linha na tabela de **ambas** as seções (Português e English), com arquivo/link, data, componente, tags e um resumo curto orientado a sintoma (mesmo nível de detalhe das linhas já existentes na tabela).
+- **Se o problema já estava registrado em [`known-issues.md`](../../../known-issues.md) / `known-issues/`** (problema ativo, ainda não resolvido): isso significa que o post-mortem que você acabou de criar substitui esse registro. Remova a linha correspondente da tabela de `known-issues.md` (nas duas seções) e apague o arquivo em `known-issues/`.
 - Se o problema resolvido também mudou o estado de algum componente documentado em `clusters/<nome>/config.md`, atualize esse arquivo também (checklist e/ou log de comandos), mantendo os dois documentos consistentes entre si. O `config.md` continua só em português (não é um documento bilíngue).
 - Não duplique informação de estado (config atual) dentro do arquivo de troubleshooting — o troubleshooting documenta o *problema e sua resolução*, o `config.md` documenta o *estado atual*.
