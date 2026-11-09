@@ -18,6 +18,7 @@ Registrado em [known-issues/arr_stack_general_instability.md](../known-issues/ar
 * Indisponibilidade intermitente de apps da stack `*arr`, recorrente mesmo com todos os nodes e o TrueNAS ligados (confirmado que não é o ciclo de economia de energia noturno — ver "Processo de Investigação").
 * Jellyfin tinha problema parecido mas **com restart contabilizado** (40 restarts observados) — confirmado como [known-issue separado](../known-issues/jellyfin_frequent_pod_restarts.md), não coberto por este documento.
 * Nos logs do Sonarr/Radarr/Lidarr, exceções repetidas: `System.Net.Http.HttpRequestException: Connection refused (192.168.3.207:80)`.
+* Erro "Failed to Load Indexers from API" (registrado separadamente em [known-issues/prowlarr_indexers_failed_to_load_from_api.md](../known-issues/prowlarr_indexers_failed_to_load_from_api.md), 2026-11-03) aparecendo tanto na página de Indexers do Prowlarr quanto nos apps `*arr` sincronizados com ele — mesma classe de sintoma (Sonarr/Radarr falhando ao falar com o Prowlarr), não só o proxy Torznab.
 
 ---
 
@@ -103,7 +104,7 @@ kubectl logs -n media -l app=lidarr --tail=200 | grep -i "refused"
 3. **Isolar o IP específico no erro, não só o sintoma geral, é o que destrava o diagnóstico** — "instabilidade geral da stack" parecia um problema difuso; o log bruto do Sonarr apontando `192.168.3.207` (e confirmando o mesmo padrão em Radarr/Lidarr, ausente em Bazarr/LazyLibrarian) reduziu o escopo de "algo errado em algum lugar do cluster" para "um app específico, configurado de um jeito específico".
 4. **Um pod único de `kube-vip-ds` pinado ao control-plane é um ponto único pra ARP de todos os `LoadBalancer` IPs** — vale lembrar disso ao investigar qualquer instabilidade de rede futura envolvendo múltiplos `LoadBalancer` Services ao mesmo tempo, mesmo que não tenha sido a causa desta vez (o líder estava estável há 12 dias).
 
-**Nota**: o known-issue [`prowlarr_indexers_failed_to_load_from_api.md`](../known-issues/prowlarr_indexers_failed_to_load_from_api.md) (Prowlarr falhando ao carregar indexers **externos**) pode estar relacionado — mesma classe de app, mesmo node — mas trata de tráfego de **saída** do Prowlarr para a internet, uma direção diferente da corrigida aqui (entrada no Prowlarr vinda do Sonarr/Radarr/Lidarr). Não foi validado que esta correção o resolve; continua em aberto em `known-issues.md`.
+**Atualização (2026-11-09)**: confirmado pelo usuário que, após essa correção, o erro "Failed to Load Indexers from API" (registrado em `prowlarr_indexers_failed_to_load_from_api.md`) também parou de ocorrer — mesma causa raiz, known-issue promovido/fechado junto com este documento.
 
 ---
 
@@ -121,6 +122,7 @@ Logged in [known-issues/arr_stack_general_instability.md](../known-issues/arr_st
 * Intermittent unavailability of `*arr` stack apps, recurring even with every node and TrueNAS powered on (confirmed this wasn't the overnight power-saving cycle — see "Investigation Process").
 * Jellyfin had a similar-looking problem but **with an actual restart count** (40 restarts observed) — confirmed as a [separate known-issue](../known-issues/jellyfin_frequent_pod_restarts.md), not covered by this document.
 * In Sonarr/Radarr/Lidarr logs, repeated exceptions: `System.Net.Http.HttpRequestException: Connection refused (192.168.3.207:80)`.
+* "Failed to Load Indexers from API" error (separately logged in [known-issues/prowlarr_indexers_failed_to_load_from_api.md](../known-issues/prowlarr_indexers_failed_to_load_from_api.md), 2026-11-03) showing up both on Prowlarr's Indexers page and on the `*arr` apps synced with it — same class of symptom (Sonarr/Radarr failing to talk to Prowlarr), not just the Torznab proxy.
 
 ---
 
@@ -206,4 +208,4 @@ kubectl logs -n media -l app=lidarr --tail=200 | grep -i "refused"
 3. **Isolating the specific IP in the error, not just the general symptom, is what unlocks the diagnosis** — "general stack instability" looked like a diffuse problem; Sonarr's raw log pointing at `192.168.3.207` (and confirming the same pattern in Radarr/Lidarr, absent in Bazarr/LazyLibrarian) narrowed "something's wrong somewhere in the cluster" down to "one specific app, configured one specific way."
 4. **A single `kube-vip-ds` pod pinned to the control-plane is a single point of ARP for every `LoadBalancer` IP** — worth remembering when investigating any future network instability involving multiple `LoadBalancer` Services at once, even though it wasn't the cause this time (the leader had been stable for 12 days).
 
-**Note**: the known-issue [`prowlarr_indexers_failed_to_load_from_api.md`](../known-issues/prowlarr_indexers_failed_to_load_from_api.md) (Prowlarr failing to load **external** indexers) may be related — same app, same node — but it's about Prowlarr's **outbound** traffic to the internet, a different direction from what was fixed here (inbound to Prowlarr from Sonarr/Radarr/Lidarr). It hasn't been validated that this fix resolves it; it remains open in `known-issues.md`.
+**Update (2026-11-09)**: confirmed by the user that, after this fix, the "Failed to Load Indexers from API" error (logged in `prowlarr_indexers_failed_to_load_from_api.md`) also stopped occurring — same root cause, known-issue promoted/closed together with this document.

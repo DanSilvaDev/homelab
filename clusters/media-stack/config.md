@@ -157,7 +157,7 @@ kubectl create secret generic unpackerr-api-keys \
 
 ## Próximos passos
 
-Todas as fases propostas foram concluídas — não há próximos passos de implantação em aberto. Problemas identificados durante a implantação, ainda não resolvidos, estão em [`known-issues.md`](../../known-issues.md): IP duplicado `192.168.3.201`, zvol do worker2 não redimensionado, erro "Failed to Load Indexers from API" no Prowlarr, e restarts frequentes do Jellyfin (SIGSEGV, provável bug upstream de WebSocket — ver [known-issues/jellyfin_frequent_pod_restarts.md](../../known-issues/jellyfin_frequent_pod_restarts.md)). Melhorias futuras (fora do escopo original) estão em [`ideas.md`](../../ideas.md).
+Todas as fases propostas foram concluídas — não há próximos passos de implantação em aberto. Problemas identificados durante a implantação, ainda não resolvidos, estão em [`known-issues.md`](../../known-issues.md): IP duplicado `192.168.3.201`, zvol do worker2 não redimensionado, e restarts frequentes do Jellyfin (SIGSEGV, provável bug upstream de WebSocket — ver [known-issues/jellyfin_frequent_pod_restarts.md](../../known-issues/jellyfin_frequent_pod_restarts.md)). O erro "Failed to Load Indexers from API" no Prowlarr foi resolvido (2026-11-09) junto com a instabilidade geral da stack `*arr` — ver [troubleshooting/arr_stack_connection_refused_prowlarr_loadbalancer_ip.md](../../troubleshooting/arr_stack_connection_refused_prowlarr_loadbalancer_ip.md). Melhorias futuras (fora do escopo original) estão em [`ideas.md`](../../ideas.md).
 
 ## Outros `*arr`/ferramentas do ecossistema (referência)
 
