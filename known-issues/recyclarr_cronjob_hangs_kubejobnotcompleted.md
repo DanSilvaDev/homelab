@@ -30,6 +30,8 @@ Adicionados `activeDeadlineSeconds: 600` (10min) ao `Job` e `concurrencyPolicy: 
 
 O Job travado original (`recyclarr-sync-29902320`, preso há 15h+ com processos órfãos acumulados dos testes de diagnóstico) foi removido manualmente via `kubectl delete job -n media recyclarr-sync-29902320` (2026-11-09).
 
+Dado que **todo** `sync` falha (não é intermitente — o bug acontece em 100% das execuções), o próprio `CronJob` `recyclarr-sync` foi **removido do cluster** (`kubectl delete`, não só suspenso) pra não alocar recursos com execuções que sempre vão terminar em falha após os 10min do `activeDeadlineSeconds`. O manifesto continua versionado em `apps/servarr/recyclarr/cronjob.yaml`, só não está aplicado — reaplicar quando este known-issue for fechado.
+
 ### Tentativa de downgrade pra v7 (não concluída)
 
 Avaliado downgrade pra `ghcr.io/recyclarr/recyclarr:7` (`7.5.2`) — a v7 usa a branch `master` pros templates (não a lógica quebrada de `v{major}` introduzida na v8), então teoricamente evitaria o bug acima. Porém:
@@ -72,6 +74,8 @@ The `recyclarr-sync` `CronJob` (namespace `media`, scheduled daily at 9am) was f
 Added `activeDeadlineSeconds: 600` (10min) to the `Job` and `concurrencyPolicy: Forbid` to the `CronJob`, in `apps/servarr/recyclarr/cronjob.yaml` — doesn't fix the bug, but prevents the Job from being stuck for 12h+ (automatically terminated after 10min, failing fast) and prevents stuck Jobs from piling up concurrently.
 
 The original stuck Job (`recyclarr-sync-29902320`, stuck for 15h+ with orphaned processes accumulated from diagnostic testing) was manually removed via `kubectl delete job -n media recyclarr-sync-29902320` (2026-11-09).
+
+Since **every** `sync` fails (not intermittent — the bug happens on 100% of runs), the `recyclarr-sync` `CronJob` itself was **removed from the cluster** (`kubectl delete`, not just suspended) to avoid allocating resources to runs that will always end in failure after the `activeDeadlineSeconds` 10min window. The manifest remains versioned in `apps/servarr/recyclarr/cronjob.yaml`, it's just not applied — reapply once this known-issue is closed.
 
 ### Downgrade attempt to v7 (not completed)
 
