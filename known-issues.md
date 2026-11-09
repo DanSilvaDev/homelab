@@ -12,6 +12,7 @@ Quando um problema daqui for resolvido: escreva o post-mortem em `troubleshootin
 
 | Problema | Componente | Tags | Data | Link |
 |---|---|---|---|---|
+| CronJob do Recyclarr trava e dispara `KubeJobNotCompleted` (Job preso por 12h+) | Recyclarr, CronJob, Alertmanager | Media Stack, CronJob, Alertmanager | 2026-11-08 | [recyclarr_cronjob_hangs_kubejobnotcompleted.md](known-issues/recyclarr_cronjob_hangs_kubejobnotcompleted.md) |
 | qBittorrent trava com frequência em "Downloading metadata" | qBittorrent, Gluetun | Media Stack, VPN, Network | 2026-11-08 | [qbittorrent_stuck_downloading_metadata.md](known-issues/qbittorrent_stuck_downloading_metadata.md) |
 | Alertmanager dispara alerta de alto consumo de memória pro TrueNAS (ZFS ARC, comportamento esperado) | Alertmanager, TrueNAS | Alertmanager, Monitoring, TrueNAS | 2026-11-08 | [alertmanager_high_memory_alert_truenas.md](known-issues/alertmanager_high_memory_alert_truenas.md) |
 | Instabilidade generalizada na stack `*arr` (páginas indisponíveis sem restart de pod) | Prowlarr, Sonarr, Radarr, Lidarr, LazyLibrarian, Bazarr | Media Stack, Performance, Node | 2026-11-07 | [arr_stack_general_instability.md](known-issues/arr_stack_general_instability.md) |
@@ -31,6 +32,7 @@ When a problem here gets resolved: write the post-mortem in `troubleshooting/` (
 
 | Problem | Component | Tags | Date | Link |
 |---|---|---|---|---|
+| Recyclarr CronJob hangs and fires `KubeJobNotCompleted` (Job stuck for 12h+) | Recyclarr, CronJob, Alertmanager | Media Stack, CronJob, Alertmanager | 2026-11-08 | [recyclarr_cronjob_hangs_kubejobnotcompleted.md](known-issues/recyclarr_cronjob_hangs_kubejobnotcompleted.md) |
 | qBittorrent frequently gets stuck on "Downloading metadata" | qBittorrent, Gluetun | Media Stack, VPN, Network | 2026-11-08 | [qbittorrent_stuck_downloading_metadata.md](known-issues/qbittorrent_stuck_downloading_metadata.md) |
 | Alertmanager fires a high memory usage alert for TrueNAS (ZFS ARC, expected behavior) | Alertmanager, TrueNAS | Alertmanager, Monitoring, TrueNAS | 2026-11-08 | [alertmanager_high_memory_alert_truenas.md](known-issues/alertmanager_high_memory_alert_truenas.md) |
 | General instability in the `*arr` stack (pages unavailable with no pod restart) | Prowlarr, Sonarr, Radarr, Lidarr, LazyLibrarian, Bazarr | Media Stack, Performance, Node | 2026-11-07 | [arr_stack_general_instability.md](known-issues/arr_stack_general_instability.md) |
