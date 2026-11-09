@@ -9,7 +9,7 @@
 **Status**: 🔴 Diagnóstico pendente.
 **Componente(s)**: Prowlarr, apps `*arr` (media stack).
 **Identificado em**: 2026-11-03.
-**Relacionado**: [arr_stack_general_instability.md](arr_stack_general_instability.md) (possível relação).
+**Relacionado**: [troubleshooting/arr_stack_connection_refused_prowlarr_loadbalancer_ip.md](../troubleshooting/arr_stack_connection_refused_prowlarr_loadbalancer_ip.md) — known-issue irmão (`arr_stack_general_instability.md`) resolvido; causa raiz confirmada foi tráfego **interno** (Sonarr/Radarr/Lidarr → Prowlarr) saindo pelo IP do LoadBalancer. Este problema aqui é sobre tráfego de **saída** do Prowlarr pra indexers externos — direção diferente, não confirmado que a mesma correção resolve.
 
 Erro "Failed to Load Indexers from API" em **todos** os indexers configurados, aparecendo tanto na página de Indexers do Prowlarr quanto na dos apps `*arr` que sincronizam com ele.
 
@@ -29,7 +29,7 @@ O aumento de `limits.cpu` (aplicado por outro motivo na Fase 5 do media stack) n
 **Status**: 🔴 Diagnosis pending.
 **Component(s)**: Prowlarr, `*arr` apps (media stack).
 **Identified on**: 2026-11-03.
-**Related**: [arr_stack_general_instability.md](arr_stack_general_instability.md) (possibly related).
+**Related**: [troubleshooting/arr_stack_connection_refused_prowlarr_loadbalancer_ip.md](../troubleshooting/arr_stack_connection_refused_prowlarr_loadbalancer_ip.md) — the sibling known-issue (`arr_stack_general_instability.md`) is now resolved; the confirmed root cause was **internal** traffic (Sonarr/Radarr/Lidarr → Prowlarr) going out through the LoadBalancer IP. This issue is about Prowlarr's **outbound** traffic to external indexers — a different direction, not confirmed the same fix resolves it.
 
 "Failed to Load Indexers from API" error on **every** configured indexer, showing up both on Prowlarr's Indexers page and on the `*arr` apps that sync with it.
 
