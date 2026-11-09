@@ -12,6 +12,9 @@ Quando uma ideia for implementada: a implementação real já gera seus próprio
 
 | Ideia | Componente | Data | Link |
 |---|---|---|---|
+| Runner self-hosted do GitHub Actions no cluster, pra CI/CD dos repositórios pessoais | novo componente no cluster, repositórios pessoais no GitHub | 2026-11-09 | [github_actions_self_hosted_runner.md](ideas/github_actions_self_hosted_runner.md) |
+| Rotina de snapshot local + backup em nuvem do TrueNAS | TrueNAS | 2026-11-09 | [truenas_cloud_backup_snapshot_routine.md](ideas/truenas_cloud_backup_snapshot_routine.md) |
+| Stack de dados (PostgreSQL, RabbitMQ, Redis, Kafka) pra apps locais em desenvolvimento | novo componente no cluster | 2026-11-09 | [local_dev_data_stack_postgres_rabbitmq_redis_kafka.md](ideas/local_dev_data_stack_postgres_rabbitmq_redis_kafka.md) |
 | Avaliar GitHub Wiki vs. manter a documentação no repositório | README.md, ia/, troubleshooting.md, known-issues.md, ideas.md | 2026-11-08 | [github_wiki_vs_in_repo_docs.md](ideas/github_wiki_vs_in_repo_docs.md) |
 | Limpeza automática de pastas `archived-*` no TrueNAS após 30 dias | TrueNAS, nfs-subdir-external-provisioner | 2026-11-08 | [truenas_archived_pvc_cleanup_automation.md](ideas/truenas_archived_pvc_cleanup_automation.md) |
 | HTTPS com certificado válido em todo o cluster, aposentando HTTP | Grafana, Prometheus, Alertmanager, ntfy, Pi-hole, media stack | 2026-11-08 | [cluster_wide_https_valid_certificates.md](ideas/cluster_wide_https_valid_certificates.md) |
@@ -33,6 +36,9 @@ When an idea gets implemented: the actual implementation already generates its o
 
 | Idea | Component | Date | Link |
 |---|---|---|---|
+| Self-hosted GitHub Actions runner in the cluster, for personal repositories' CI/CD | new cluster component, personal GitHub repositories | 2026-11-09 | [github_actions_self_hosted_runner.md](ideas/github_actions_self_hosted_runner.md) |
+| TrueNAS local snapshot + cloud backup routine | TrueNAS | 2026-11-09 | [truenas_cloud_backup_snapshot_routine.md](ideas/truenas_cloud_backup_snapshot_routine.md) |
+| Data stack (PostgreSQL, RabbitMQ, Redis, Kafka) for local apps under development | new cluster component | 2026-11-09 | [local_dev_data_stack_postgres_rabbitmq_redis_kafka.md](ideas/local_dev_data_stack_postgres_rabbitmq_redis_kafka.md) |
 | Evaluate GitHub Wiki vs. keeping docs in the repository | README.md, ia/, troubleshooting.md, known-issues.md, ideas.md | 2026-11-08 | [github_wiki_vs_in_repo_docs.md](ideas/github_wiki_vs_in_repo_docs.md) |
 | Automatic cleanup of `archived-*` folders on TrueNAS after 30 days | TrueNAS, nfs-subdir-external-provisioner | 2026-11-08 | [truenas_archived_pvc_cleanup_automation.md](ideas/truenas_archived_pvc_cleanup_automation.md) |
 | Cluster-wide HTTPS with a valid certificate, retiring HTTP | Grafana, Prometheus, Alertmanager, ntfy, Pi-hole, media stack | 2026-11-08 | [cluster_wide_https_valid_certificates.md](ideas/cluster_wide_https_valid_certificates.md) |
