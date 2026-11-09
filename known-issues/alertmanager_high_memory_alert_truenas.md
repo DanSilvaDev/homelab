@@ -6,7 +6,7 @@
 
 ## Português
 
-**Status**: 🔴 Causa identificada — ação pendente (ajustar/desativar o alerta especificamente pro TrueNAS).
+**Status**: 🔴 Causa confirmada, correção preparada em `infrastructure/monitoring/values.yaml` — pendente de `helm upgrade` e validação.
 **Componente(s)**: Alertmanager, TrueNAS (ZFS ARC).
 **Identificado em**: 2026-11-08.
 **Relacionado**: [Observability - config.md](../clusters/observability/config.md) (seção de resources, menciona um incidente anterior de "memory pressure" no TrueNAS em 2026-10-26, resolvido na época reduzindo a RAM da VM worker2 — ver [Worker2 - config.md](../clusters/worker2/config.md)). Esse histórico é sobre pressão de memória real; o caso atual é diferente — é o alerta disparando para um consumo de memória que é esperado.
@@ -16,19 +16,26 @@ O Alertmanager está disparando alertas de alto consumo de memória para o host 
 ### Causa identificada
 
 - **ZFS ARC consome memória disponível por padrão** — comportamento normal e esperado do ZFS, não um problema de recursos real no host.
-- O alerta provavelmente é uma das regras padrão de memória do `kube-prometheus-stack`/node-exporter mixin (nome exato ainda não identificado — não há regra customizada de memória pro TrueNAS versionada em `apps/grafana/alerts/` neste repositório), que não leva em conta esse comportamento do ZFS ao avaliar o threshold.
+- Confirmado via UI do Prometheus (`/alerts`, grupo de regras `node-exporter`, regra padrão do `kube-prometheus-stack`/mixin — não customizada neste repo): `alertname="NodeMemoryHighUtilization"`, expressão `100 - (node_memory_MemAvailable_bytes{job="node-exporter"} / node_memory_MemTotal_bytes{job="node-exporter"} * 100) > 90`, `for: 15m`. Disparando pra `instance="192.168.3.103:9100"` (`service="truenas-node-exporter"`), em 95.7% no momento da investigação.
 
-### Ação sugerida (ainda não aplicada)
+### Correção aplicada (pendente de `helm upgrade` + validação)
 
-- Identificar o `alertname` exato disparando (via UI do Alertmanager/Prometheus, `http://alert.home`) antes de qualquer mudança.
-- Desativar ou ajustar o alerta **só para a instância do TrueNAS** (não globalmente, pra não perder o alerta de memória real nos outros nodes) — opções a avaliar: silence permanente no Alertmanager filtrado por `instance`/`job` do TrueNAS, ou uma exceção na expressão PromQL da regra excluindo essa instância.
-- Evitar desabilitar a regra inteira via `kubePrometheus.defaultRules` em `infrastructure/monitoring/values.yaml`, já que isso desativaria o alerta pra todos os nodes, não só o TrueNAS.
+Em vez de uma silence manual na UI (não fica versionada) ou desabilitar a regra inteira via `kubePrometheus.defaultRules` (perderia o alerta real nos outros nodes), seguido o mesmo padrão já usado neste repo pro `Watchdog`: uma sub-rota em `alertmanager.config.route.routes` direcionando esse `alertname` + `instance` específicos pro receiver `"null"` (silencioso), em `infrastructure/monitoring/values.yaml`. A regra continua ativa e visível no Prometheus/Alertmanager pra todos os nodes — só não gera mais notificação (Telegram/ntfy) pra essa instância específica.
+
+```bash
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  -f infrastructure/monitoring/values.yaml \
+  --version 92.13.1
+```
+
+Validação pendente: confirmar em `http://192.168.3.204/#/alerts` que o alerta continua listado, e que não chega mais notificação pro TrueNAS especificamente, sem afetar `NodeMemoryHighUtilization` de outros nodes.
 
 ---
 
 ## English
 
-**Status**: 🔴 Cause identified — action pending (adjust/disable the alert specifically for TrueNAS).
+**Status**: 🔴 Cause confirmed, fix prepared in `infrastructure/monitoring/values.yaml` — pending `helm upgrade` and validation.
 **Component(s)**: Alertmanager, TrueNAS (ZFS ARC).
 **Identified on**: 2026-11-08.
 **Related**: [Observability - config.md](../clusters/observability/config.md) (resources section mentions an earlier "memory pressure" incident on TrueNAS in 2026-10-26, resolved at the time by reducing the worker2 VM's RAM — see [Worker2 - config.md](../clusters/worker2/config.md)). That history was about real memory pressure; the current case is different — it's the alert firing for memory usage that is expected.
@@ -38,10 +45,17 @@ Alertmanager is firing high memory usage alerts for the TrueNAS host. Initial in
 ### Identified cause
 
 - **ZFS ARC consumes available memory by default** — normal, expected ZFS behavior, not a real resource problem on the host.
-- The alert is likely one of the default memory rules from `kube-prometheus-stack`/the node-exporter mixin (exact name not yet identified — there's no custom memory rule for TrueNAS versioned in `apps/grafana/alerts/` in this repository), which doesn't account for this ZFS behavior when evaluating its threshold.
+- Confirmed via the Prometheus UI (`/alerts`, `node-exporter` rule group, a default `kube-prometheus-stack`/mixin rule — not customized in this repo): `alertname="NodeMemoryHighUtilization"`, expression `100 - (node_memory_MemAvailable_bytes{job="node-exporter"} / node_memory_MemTotal_bytes{job="node-exporter"} * 100) > 90`, `for: 15m`. Firing for `instance="192.168.3.103:9100"` (`service="truenas-node-exporter"`), at 95.7% at investigation time.
 
-### Suggested action (not yet applied)
+### Fix applied (pending `helm upgrade` + validation)
 
-- Identify the exact `alertname` firing (via the Alertmanager/Prometheus UI, `http://alert.home`) before making any change.
-- Disable or adjust the alert **only for the TrueNAS instance** (not globally, to avoid losing the real memory alert on the other nodes) — options to evaluate: a permanent silence in Alertmanager filtered by TrueNAS's `instance`/`job`, or an exception in the rule's PromQL expression excluding that instance.
-- Avoid disabling the whole rule via `kubePrometheus.defaultRules` in `infrastructure/monitoring/values.yaml`, since that would disable the alert for every node, not just TrueNAS.
+Instead of a manual silence in the UI (not version-controlled) or disabling the whole rule via `kubePrometheus.defaultRules` (would lose the real alert on other nodes), followed the same pattern already used in this repo for `Watchdog`: a sub-route under `alertmanager.config.route.routes` directing that specific `alertname` + `instance` to the `"null"` (silent) receiver, in `infrastructure/monitoring/values.yaml`. The rule stays active and visible in Prometheus/Alertmanager for every node — it just stops generating a notification (Telegram/ntfy) for that specific instance.
+
+```bash
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  -f infrastructure/monitoring/values.yaml \
+  --version 92.13.1
+```
+
+Validation pending: confirm at `http://192.168.3.204/#/alerts` that the alert is still listed, and that no notification reaches TrueNAS specifically anymore, without affecting `NodeMemoryHighUtilization` on other nodes.
