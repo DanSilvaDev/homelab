@@ -6,7 +6,7 @@
 
 ## Português
 
-**Status**: 🔴 Causa raiz provável identificada, mas aparenta ser um bug upstream do próprio Jellyfin — sem correção disponível do nosso lado.
+**Status**: 🔵 Bloqueado por upstream — causa raiz provável identificada (crash em torno de reconexões de WebSocket), mas aparenta ser um bug no próprio Jellyfin, sem correção disponível do nosso lado.
 **Componente(s)**: Jellyfin (media stack).
 **Identificado em**: 2026-11-04 (16 restarts em 35 horas). Investigado a fundo em 2026-11-08/09.
 **Relacionado**: [troubleshooting/jellyfin_subtitle_permission_denied_nfs_root.md](../troubleshooting/jellyfin_subtitle_permission_denied_nfs_root.md) — um problema real e distinto encontrado durante esta investigação (Jellyfin não conseguia ler legendas `.srt` via NFS rodando como root) **já foi corrigido** e não é mais a causa dos restarts atuais.
@@ -24,17 +24,24 @@ Pod do Jellyfin reiniciando com frequência anormal (exit code `139` = SIGSEGV).
 
 Adicionado `readinessProbe` (`tcpSocket` na porta `8096`) ao `apps/jellyfin/deployment.yaml` — não evita o crash, mas garante que o `Service` pare de rotear tráfego pro pod durante os poucos segundos de restart, em vez de deixar requisições caírem num pod morto/subindo.
 
+### Acompanhamento upstream
+
+- **Projeto**: Jellyfin (`jellyfin/jellyfin` no GitHub).
+- **Onde checar**: [issues do jellyfin/jellyfin filtradas por "websocket crash keepalive"](https://github.com/jellyfin/jellyfin/issues?q=is%3Aissue+websocket+crash+keepalive) — não existe um número de issue único confirmado como correspondência exata (nosso crash nunca gerou uma stack trace capturada, o processo morre em silêncio total; a hipótese de `ObjectDisposedException`/`SendForceKeepAlive` vem de padrão recorrente em relatos no fórum oficial, não de um log nosso). A issue mais próxima estruturalmente encontrada até agora é [#12090](https://github.com/jellyfin/jellyfin/issues/12090) ("crash if client 'disappears' without completing the close handshake"), fechada em 2025-04-29 e corrigida pelos PRs #13457/#13459 — mas o tipo de exception lá (`NullReferenceException` em `WebSocketController.GetActiveSockets`) **não bate** com a hipótese inicial, então não é tratada como confirmada.
+- **O que procurar**: uma issue fechada cuja stack trace combine com um crash de processo inteiro (sem exception .NET logada) disparado por reconexão rápida de WebSocket (ex: refresh de aba do dashboard) — e confirmar se o PR que a fecha já está incluído na tag de imagem em uso neste repo.
+- **Versão em uso neste repo**: `jellyfin/jellyfin:12.4` (`apps/jellyfin/deployment.yaml`).
+- **Última checagem**: 2026-11-09.
+
 ### Diagnóstico sugerido (próximos passos, se o problema persistir)
 
-- Monitorar os [GitHub issues do jellyfin/jellyfin](https://github.com/jellyfin/jellyfin/issues) por `SessionWebSocketListener`/`ObjectDisposedException`/`WebSocket` pra ver se alguma versão futura corrige.
 - Testar outra tag de imagem (mais nova ou mais antiga) pra ver se o bug é específico da versão atual (`12.4`).
-- Se for crítico, capturar um core dump do crash pra identificar a stack trace nativa exata (não tentado ainda, exige setup adicional).
+- Se for crítico, capturar um core dump do crash pra identificar a stack trace nativa/exception exata (não tentado ainda, exige setup adicional) — resolveria a incerteza sobre qual issue upstream corresponde.
 
 ---
 
 ## English
 
-**Status**: 🔴 Likely root cause identified, but appears to be an upstream Jellyfin bug — no fix available on our side.
+**Status**: 🔵 Blocked on upstream — likely root cause identified (crash around WebSocket reconnections), but appears to be a bug in Jellyfin itself, no fix available on our side.
 **Component(s)**: Jellyfin (media stack).
 **Identified on**: 2026-11-04 (16 restarts in 35 hours). Investigated in depth on 2026-11-08/09.
 **Related**: [troubleshooting/jellyfin_subtitle_permission_denied_nfs_root.md](../troubleshooting/jellyfin_subtitle_permission_denied_nfs_root.md) — a real, distinct problem found during this investigation (Jellyfin couldn't read `.srt` subtitles over NFS while running as root) has **already been fixed** and is no longer the cause of the current restarts.
@@ -52,8 +59,15 @@ The Jellyfin pod restarts with abnormal frequency (exit code `139` = SIGSEGV). A
 
 Added a `readinessProbe` (`tcpSocket` on port `8096`) to `apps/jellyfin/deployment.yaml` — doesn't prevent the crash, but ensures the `Service` stops routing traffic to the pod during the few seconds of restart, instead of letting requests hit a dead/starting pod.
 
+### Upstream tracking
+
+- **Project**: Jellyfin (`jellyfin/jellyfin` on GitHub).
+- **Where to check**: [jellyfin/jellyfin issues filtered by "websocket crash keepalive"](https://github.com/jellyfin/jellyfin/issues?q=is%3Aissue+websocket+crash+keepalive) — there's no single confirmed matching issue number (our crash never produced a captured stack trace, the process dies in total silence; the `ObjectDisposedException`/`SendForceKeepAlive` hypothesis comes from a recurring pattern in official forum reports, not from one of our own logs). The structurally closest issue found so far is [#12090](https://github.com/jellyfin/jellyfin/issues/12090) ("crash if client 'disappears' without completing the close handshake"), closed 2025-04-29 and fixed by PRs #13457/#13459 — but the exception type there (`NullReferenceException` in `WebSocketController.GetActiveSockets`) **doesn't match** the initial hypothesis, so it isn't treated as confirmed.
+- **What to look for**: a closed issue whose stack trace matches a whole-process crash (no .NET exception logged) triggered by a fast WebSocket reconnect (e.g. refreshing the dashboard tab) — and confirm whether the PR that closes it is already included in the image tag used in this repo.
+- **Version in use in this repo**: `jellyfin/jellyfin:12.4` (`apps/jellyfin/deployment.yaml`).
+- **Last checked**: 2026-11-09.
+
 ### Suggested diagnostics (next steps, if the problem persists)
 
-- Monitor [jellyfin/jellyfin's GitHub issues](https://github.com/jellyfin/jellyfin/issues) for `SessionWebSocketListener`/`ObjectDisposedException`/`WebSocket` to see if a future release fixes it.
 - Try a different image tag (newer or older) to see if the bug is specific to the current version (`12.4`).
-- If it becomes critical, capture a core dump of the crash to identify the exact native stack trace (not attempted yet, needs additional setup).
+- If it becomes critical, capture a core dump of the crash to identify the exact native stack trace/exception (not attempted yet, needs additional setup) — would resolve the uncertainty about which upstream issue matches.
