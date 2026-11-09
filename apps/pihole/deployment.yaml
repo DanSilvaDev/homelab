@@ -36,7 +36,7 @@ spec:
                 name: pihole-configs
           securityContext:
             capabilities:
-              add: ["SYS_NICE"]
+              add: ["SYS_NICE","SYS_PTRACE"]
           ports:
             - name: http
               containerPort: 80

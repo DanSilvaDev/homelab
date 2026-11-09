@@ -147,6 +147,7 @@ Agregação de logs de todos os pods do cluster, consultável no Grafana (Explor
 - `kubectl get pods -n monitoring -l app.kubernetes.io/name=alloy` — 3 pods `Running` (um por node).
 - `kubectl top pod` confirmou uso de memória bem abaixo do limit configurado.
 - Grafana Explore → datasource Loki → query `{namespace="monitoring"}` retornou logs dos pods do namespace.
+- Log de consultas do Pi-hole (namespace `dns-services`) confirmado visível no Loki após corrigir a ausência da capability `CAP_SYS_PTRACE` no container — ver [troubleshooting/pihole_query_log_not_forwarded_to_stdout.md](../../troubleshooting/pihole_query_log_not_forwarded_to_stdout.md).
 
 ## dcgm-exporter (métricas de GPU do worker2)
 
