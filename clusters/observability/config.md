@@ -45,13 +45,13 @@ O cluster usa `kube-vip-cloud-provider` com range de IPs `192.168.3.200-254` par
 
 | Serviço | IP | Porta | DNS local (Pi-hole) |
 |---|---|---|---|
-| Grafana | `192.168.3.201` ⚠️ | 80 | `dashboard.home` |
+| Grafana | `192.168.3.201` | 80 | `dashboard.home` |
 | Jellyfin | `192.168.3.202` | 80 (targetPort 8096) | `jellyfin.home` — ver [apps/jellyfin/](../../apps/jellyfin/) |
 | Prometheus | `192.168.3.203` | 80 (targetPort 9090) | `prometheus.home` |
 | Alertmanager | `192.168.3.204` | 80 (targetPort 9093) | `alert.home` |
 | ntfy | `192.168.3.205` | 80 | `ntfy.home` |
 
-⚠️ **`192.168.3.201` está duplicado** — o `Service` `nginx` (namespace `default`, pré-existente) também está anotado com esse mesmo IP (confirmado via `kubectl get svc -A -o wide` em 2026-11-02). Mesma classe de bug já documentada em [troubleshooting/pihole_dns_wrong_loadbalancer_ip.md](../../troubleshooting/pihole_dns_wrong_loadbalancer_ip.md) (dois `Service` não podem compartilhar um `loadBalancerIP` - o Kube-VIP atribui ao primeiro que pedir). Ainda não investigado/corrigido.
+**`192.168.3.201` duplicado com o `nginx` (resolvido, 2026-11-09)** — o `Service` `nginx` órfão (namespace `default`, resíduo de um teste via Rancher UI de fevereiro) também estava anotado com esse mesmo IP (confirmado via `kubectl get svc -A -o wide` em 2026-11-02). Mesma classe de bug já documentada em [troubleshooting/pihole_dns_wrong_loadbalancer_ip.md](../../troubleshooting/pihole_dns_wrong_loadbalancer_ip.md) (dois `Service` não podem compartilhar um `loadBalancerIP` - o Kube-VIP atribui ao primeiro que pedir). Removido — ver [troubleshooting/nginx_orphan_service_duplicate_loadbalancer_ip.md](../../troubleshooting/nginx_orphan_service_duplicate_loadbalancer_ip.md).
 
 > **Atenção de segurança**: Prometheus, Alertmanager e ntfy **não têm autenticação própria**. Aceitável dentro da LAN confiável de casa, mas nunca expor publicamente (ex: Cloudflare Tunnel) sem autenticação na frente.
 
