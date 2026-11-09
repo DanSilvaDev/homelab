@@ -21,6 +21,18 @@ spec:
       # Só roda no worker2 - único node com GPU (ver clusters/worker2/config.md).
       nodeSelector:
         gpu: "true"
+      # 1000:1000 - mesma convenção dos demais apps da media stack (ver
+      # clusters/media-stack/config.md, "PUID/PGID"). Antes rodava como root
+      # (imagem oficial jellyfin/jellyfin não usa PUID/PGID, só respeita o UID
+      # do container normalmente) - sobre NFS, requisições como root não
+      # conseguiam ler arquivos com permissão restrita a dono/grupo (ex: .srt
+      # gerados pelo Bazarr, modo 640, dono 1000:1000), mesmo com chown
+      # funcionando normalmente como root (não é um root_squash "clássico" -
+      # mecanismo exato não confirmado) - ver
+      # troubleshooting/jellyfin_subtitle_permission_denied_nfs_root.md.
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
       containers:
         - name: jellyfin
           image: jellyfin/jellyfin:12.4
@@ -39,6 +51,18 @@ spec:
             - name: media
               mountPath: /media
               readOnly: true
+          readinessProbe:
+            # Não evita o crash em si (ver known-issues/jellyfin_frequent_pod_restarts.md -
+            # bug upstream de WebSocket, não controlado por este repo), mas garante que o
+            # Service pare de rotear tráfego pro pod durante os poucos segundos de restart,
+            # em vez de deixar requisições caírem num pod morto/subindo.
+            tcpSocket:
+              port: 8096
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
           resources:
             # nvidia.com/gpu: "1" - um dos 2 slots liberados pelo time-slicing (ver
             # infrastructure/nvidia-device-plugin/values.yaml); o outro fica com o
