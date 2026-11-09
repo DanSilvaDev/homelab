@@ -12,7 +12,7 @@ Quando um problema daqui for resolvido: escreva o post-mortem em `troubleshootin
 
 | Problema | Componente | Tags | Data | Link |
 |---|---|---|---|---|
-| CronJob do Recyclarr trava e dispara `KubeJobNotCompleted` (Job preso por 12h+) | Recyclarr, CronJob, Alertmanager | Media Stack, CronJob, Alertmanager | 2026-11-08 | [recyclarr_cronjob_hangs_kubejobnotcompleted.md](known-issues/recyclarr_cronjob_hangs_kubejobnotcompleted.md) |
+| 🔵 CronJob do Recyclarr trava e dispara `KubeJobNotCompleted` (branch `v8` inexistente, loop de retry infinito) | Recyclarr, CronJob, Alertmanager | Media Stack, CronJob, Alertmanager | 2026-11-08 | [recyclarr_cronjob_hangs_kubejobnotcompleted.md](known-issues/recyclarr_cronjob_hangs_kubejobnotcompleted.md) |
 | qBittorrent trava com frequência em "Downloading metadata" | qBittorrent, Gluetun | Media Stack, VPN, Network | 2026-11-08 | [qbittorrent_stuck_downloading_metadata.md](known-issues/qbittorrent_stuck_downloading_metadata.md) |
 | Alertmanager dispara alerta de alto consumo de memória pro TrueNAS (ZFS ARC, comportamento esperado) | Alertmanager, TrueNAS | Alertmanager, Monitoring, TrueNAS | 2026-11-08 | [alertmanager_high_memory_alert_truenas.md](known-issues/alertmanager_high_memory_alert_truenas.md) |
 | 🔵 Pod do Jellyfin reiniciando com frequência anormal (SIGSEGV, provável bug upstream de WebSocket) | Jellyfin | Media Stack, WebSocket | 2026-11-04 | [jellyfin_frequent_pod_restarts.md](known-issues/jellyfin_frequent_pod_restarts.md) |
@@ -31,7 +31,7 @@ When a problem here gets resolved: write the post-mortem in `troubleshooting/` (
 
 | Problem | Component | Tags | Date | Link |
 |---|---|---|---|---|
-| Recyclarr CronJob hangs and fires `KubeJobNotCompleted` (Job stuck for 12h+) | Recyclarr, CronJob, Alertmanager | Media Stack, CronJob, Alertmanager | 2026-11-08 | [recyclarr_cronjob_hangs_kubejobnotcompleted.md](known-issues/recyclarr_cronjob_hangs_kubejobnotcompleted.md) |
+| 🔵 Recyclarr CronJob hangs and fires `KubeJobNotCompleted` (nonexistent `v8` branch, infinite retry loop) | Recyclarr, CronJob, Alertmanager | Media Stack, CronJob, Alertmanager | 2026-11-08 | [recyclarr_cronjob_hangs_kubejobnotcompleted.md](known-issues/recyclarr_cronjob_hangs_kubejobnotcompleted.md) |
 | qBittorrent frequently gets stuck on "Downloading metadata" | qBittorrent, Gluetun | Media Stack, VPN, Network | 2026-11-08 | [qbittorrent_stuck_downloading_metadata.md](known-issues/qbittorrent_stuck_downloading_metadata.md) |
 | Alertmanager fires a high memory usage alert for TrueNAS (ZFS ARC, expected behavior) | Alertmanager, TrueNAS | Alertmanager, Monitoring, TrueNAS | 2026-11-08 | [alertmanager_high_memory_alert_truenas.md](known-issues/alertmanager_high_memory_alert_truenas.md) |
 | 🔵 Jellyfin pod restarting with abnormal frequency (SIGSEGV, likely upstream WebSocket bug) | Jellyfin | Media Stack, WebSocket | 2026-11-04 | [jellyfin_frequent_pod_restarts.md](known-issues/jellyfin_frequent_pod_restarts.md) |

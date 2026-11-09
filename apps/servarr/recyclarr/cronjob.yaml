@@ -8,8 +8,18 @@ spec:
   # agressivo que isso. Ajustável sem impacto (Recyclarr é idempotente a cada sync).
   # ajustado para o período da manhã, pois na madrugada os servidores são desligados
   schedule: "0 9 * * *"
+  # Forbid - evita empilhar um novo Job por cima de um já travado (ver
+  # known-issues/recyclarr_cronjob_hangs_kubejobnotcompleted.md: bug upstream do
+  # Recyclarr faz o provider config-templates entrar num loop infinito de retry
+  # tentando buscar uma branch `v8` que não existe mais no repositório oficial).
+  concurrencyPolicy: Forbid
   jobTemplate:
     spec:
+      # 600s (10min) - mitigação pro bug upstream acima: sem isso, o Job fica
+      # preso indefinidamente (confirmado 15h+) até ser interrompido manualmente,
+      # disparando o alerta KubeJobNotCompleted. Uma sync normal demora segundos;
+      # 10min é folga generosa sem deixar o Job acumular tempo preso.
+      activeDeadlineSeconds: 600
       template:
         spec:
           restartPolicy: OnFailure
