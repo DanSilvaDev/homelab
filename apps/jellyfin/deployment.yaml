@@ -36,6 +36,15 @@ spec:
       containers:
         - name: jellyfin
           image: jellyfin/jellyfin:12.4
+          # Também .NET/ASP.NET Core - testando a hipótese de que o
+          # known-issues/jellyfin_frequent_pod_restarts.md ("bug upstream de
+          # WebSocket") seja na verdade o mesmo bloqueio do AppArmor padrão do
+          # containerd sobre o auto-sinal (SIGRTMIN+3/SIGABRT) do GC, como
+          # confirmado no Sonarr (ver
+          # troubleshooting/sonarr_apparmor_gc_signal_crash.md).
+          securityContext:
+            appArmorProfile:
+              type: Unconfined
           env:
             - name: TZ
               value: "America/Sao_Paulo"

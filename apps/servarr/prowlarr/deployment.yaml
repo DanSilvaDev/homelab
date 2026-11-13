@@ -21,6 +21,14 @@ spec:
       containers:
         - name: prowlarr
           image: lscr.io/linuxserver/prowlarr:latest
+          # Mesma família de código do Sonarr (.NET/CoreCLR) - vulnerável ao
+          # mesmo bloqueio do AppArmor padrão do containerd sobre o auto-sinal
+          # (SIGRTMIN+3/SIGABRT) usado pelo GC pra suspender threads, que mata
+          # o processo sem deixar rastro no log (ver
+          # troubleshooting/sonarr_apparmor_gc_signal_crash.md).
+          securityContext:
+            appArmorProfile:
+              type: Unconfined
           env:
             # PUID/PGID 1000:1000 - mesma convenção estabelecida na Fase 4
             # pro qBittorrent (ver clusters/media-stack/config.md). Prowlarr não
