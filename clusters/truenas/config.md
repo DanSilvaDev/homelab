@@ -52,16 +52,16 @@ Finalidade: armazenamento veloz para VM/Kubernetes
 | `vm-k3s-disk` | zvol | 40 GiB, volblocksize 16K, LZ4, sync Standard, sparse off, dedup off | Disco virtual exclusivo da VM worker2 |
 | `fast-data` | dataset | recordsize 128K, LZ4, sync Standard, atime off | Storage rápido genérico via NFS; contém `os_images/` (ISOs de instalação) |
 | `databases` | dataset | recordsize 16K, LZ4, sync Standard | Reservado para bancos (Postgres/Redis) — recordsize ajustado ao page size dessas engines |
-| `k8s` | dataset | recordsize 128K, LZ4, sync Standard, quota ~40GiB | Export NFS para PVs dinâmicos do cluster k3s (kube-prometheus-stack, Loki) via `nfs-subdir-external-provisioner`. Hosts autorizados: `192.168.3.101` (control-plane), `192.168.3.102` (worker1), `192.168.3.105` (worker2) |
+| `k8s` | dataset | recordsize 128K, LZ4, sync Standard, quota ~40GiB | Export NFS para PVs dinâmicos do cluster k3s (kube-prometheus-stack, Loki) via `nfs-subdir-external-provisioner`. Hosts autorizados: `192.168.3.100` (control-plane — IP real da interface física, reserva DHCP fixa; não confundir com `192.168.3.101`, que é só o IP virtual do Kube-VIP pra API), `192.168.3.102` (worker1), `192.168.3.105` (worker2) |
 
 ### `data` (Stripe, HD Seagate IronWolf 3TB — substituiu o WD Blue 1TB em 2026-11-02)
 Finalidade: armazenamento geral, mídias (Jellyfin/Plex) e backups
 
 | Nome | Compressão | Observação |
 |---|---|---|
-| `midias` | off / lz4 | **Biblioteca da media stack (Jellyfin + \*arr)**: `recordsize` 1M (ajustado em 2026-11-02 para arquivos de vídeo grandes/sequenciais), export NFS restrito aos 3 nodes do cluster (`192.168.3.101/102/105`, `rw` — antes aberto para `*`), sem quota. Estrutura de pastas: `movies/`, `tv/`, `music/`, `books/`, `downloads/`. Ver [Media Stack - config.md](../media-stack/config.md). Acesso validado antes de criar o PV/PVC definitivo via um pod descartável (`apps/helpers/test-midia-access-pod.yaml`, template reaproveitável pra validar qualquer export NFS do TrueNAS sem precisar de PV/PVC). |
+| `midias` | off / lz4 | **Biblioteca da media stack (Jellyfin + \*arr)**: `recordsize` 1M (ajustado em 2026-11-02 para arquivos de vídeo grandes/sequenciais), export NFS restrito aos 3 nodes do cluster (`192.168.3.100/102/105`, `rw` — antes aberto para `*`; `.100` é o IP real do control-plane, não o VIP `.101` do Kube-VIP), sem quota. Hoje nenhum pod da media stack roda no control-plane (sem toleration pro taint dele), então esse host nunca foi usado de fato — mantido por consistência com os outros exports. Estrutura de pastas: `movies/`, `tv/`, `music/`, `books/`, `downloads/`. Ver [Media Stack - config.md](../media-stack/config.md). Acesso validado antes de criar o PV/PVC definitivo via um pod descartável (`apps/helpers/test-midia-access-pod.yaml`, template reaproveitável pra validar qualquer export NFS do TrueNAS sem precisar de PV/PVC). |
 | `Backups` | ZSTD | Split futuro planejado em sub-datasets por fonte (ex. `smb-pc`, `nfs-k3s`) para retenção/quota independentes — ver [ideias futuras](../../ideas.md) |
-| `k8s` | LZ4 | Export NFS (quota 100GiB) para PVs dinâmicos do cluster k3s via `nfs-subdir-external-provisioner` (StorageClass `truenas-nfs-hdd`), para dados que não exigem I/O de SSD. Hosts autorizados: `192.168.3.101`, `192.168.3.102`, `192.168.3.105` |
+| `k8s` | LZ4 | Export NFS (quota 100GiB) para PVs dinâmicos do cluster k3s via `nfs-subdir-external-provisioner` (StorageClass `truenas-nfs-hdd`), para dados que não exigem I/O de SSD. Hosts autorizados: `192.168.3.100` (control-plane — IP real, não o VIP `.101` do Kube-VIP), `192.168.3.102`, `192.168.3.105` |
 
 ## Monitoramento
 - `node_exporter` (`prom/node-exporter:v1.8.2`) rodando via Docker direto no host (porta 9100), fora do catálogo de Apps da UI (restrição de host path mounts na Community Edition 25.10.7). Coletado pelo Prometheus do cluster k3s como alvo externo. Detalhes: [clusters/observability/config.md](../observability/config.md)
