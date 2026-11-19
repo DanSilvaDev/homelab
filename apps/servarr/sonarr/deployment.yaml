@@ -20,6 +20,13 @@ spec:
       containers:
         - name: sonarr
           image: lscr.io/linuxserver/sonarr:latest
+          # O perfil padrão de AppArmor do containerd bloqueia o auto-sinal
+          # (SIGRTMIN+3/SIGABRT) que o GC do .NET usa pra suspender threads,
+          # matando o processo sem deixar rastro no log (ver
+          # troubleshooting/sonarr_apparmor_gc_signal_crash.md).
+          securityContext:
+            appArmorProfile:
+              type: Unconfined
           env:
             # PUID/PGID 1000:1000 - mesma convenção da Fase 4 (ver
             # clusters/media-stack/config.md). Precisa bater com o dono das
@@ -45,7 +52,7 @@ spec:
               memory: 128Mi
             limits:
               cpu: 1000m
-              memory: 512Mi
+              memory: 1.5Gi
       volumes:
         - name: config
           persistentVolumeClaim:

@@ -87,6 +87,26 @@ alertmanager:
       group_wait: 30s
       group_interval: 5m
       repeat_interval: 4h
+      # Mesma pegadinha do "receivers" abaixo: o Helm substitui a lista "routes" inteira
+      # (não faz merge item a item). O chart por padrão já inclui uma sub-rota pro
+      # alerta sintético "Watchdog" -> receiver "null" - precisa ser reincluída aqui
+      # manualmente (confirmada via Status do Alertmanager antes de editar), senão
+      # some e o Watchdog passa a notificar normalmente junto com alertas reais.
+      routes:
+        - receiver: "null"
+          matchers:
+            - alertname="Watchdog"
+          continue: false
+        # NodeMemoryHighUtilization no TrueNAS (192.168.3.103:9100) é comportamento
+        # esperado do ZFS ARC (consome memória disponível pra cache por padrão, não é
+        # pressão real) - ver known-issues/alertmanager_high_memory_alert_truenas.md.
+        # Silenciado só pra essa instância via matcher duplo (alertname + instance),
+        # não desabilitando a regra inteira (perderia o alerta real nos outros nodes).
+        - receiver: "null"
+          matchers:
+            - alertname="NodeMemoryHighUtilization"
+            - instance="192.168.3.103:9100"
+          continue: false
     receivers:
       - name: notifications
         telegram_configs:

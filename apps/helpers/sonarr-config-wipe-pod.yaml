@@ -1,0 +1,45 @@
+# Template de pod temporario para resetar a configuracao do Sonarr (apaga o
+# conteudo da sonarr-pvc, montada em /config - banco SQLite + settings) sem
+# tocar na media-pvc. Usado originalmente apos uma corrupcao do banco do
+# Sonarr durante um import que deixou o app num loop interno de falha
+# silenciosa e excluiu uma midia (ver troubleshooting/ se promovido).
+#
+# Para reusar: escale o deployment do Sonarr pra 0 antes de aplicar
+# (`kubectl -n media scale deployment sonarr-deployment --replicas=0`),
+# aplique com `kubectl apply -f`, confira o log
+# (`kubectl -n media logs sonarr-config-wipe`), delete o pod
+# (`kubectl -n media delete pod sonarr-config-wipe`) e escale o deployment
+# de volta pra 1.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sonarr-config-wipe
+  namespace: media
+spec:
+  restartPolicy: Never
+  containers:
+    - name: wipe
+      image: busybox:latest
+      command:
+        - sh
+        - -c
+        - |
+          echo "Antes:"
+          ls -la /config
+          rm -rf /config/* /config/.[!.]*
+          echo "Depois:"
+          ls -la /config
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          cpu: 100m
+          memory: 64Mi
+      volumeMounts:
+        - name: config
+          mountPath: /config
+  volumes:
+    - name: config
+      persistentVolumeClaim:
+        claimName: sonarr-pvc

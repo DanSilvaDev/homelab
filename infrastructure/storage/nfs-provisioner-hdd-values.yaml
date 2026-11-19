@@ -2,8 +2,16 @@
 # Expõe o dataset data/k8s do TrueNAS (via bridge br1, IP estático 192.168.3.103)
 # como StorageClass dinâmica para PVCs que não exigem I/O de SSD (dados maiores, menos sensíveis a latência).
 #
-# Hosts autorizados no export NFS (TrueNAS): 192.168.3.101 (control-plane),
+# Hosts autorizados no export NFS (TrueNAS): 192.168.3.100 (control-plane),
 # 192.168.3.102 (worker1), 192.168.3.105 (worker2). Quota do dataset: 100GiB.
+# O .100 é o IP real da interface física do control-plane (reserva DHCP fixa
+# no roteador pelo MAC) - não confundir com 192.168.3.101, que é só o IP
+# virtual do Kube-VIP pra API (clusters/kube-vip/arp.yaml), nunca usado como
+# IP de origem em conexões de saída do node. Antes dessa reserva, o IP
+# dinâmico via DHCP era 192.168.3.82 - e não estava autorizado no export,
+# causando "access denied by server" ao montar o volume depois que este
+# provisioner ganhou nodeAffinity pro control-plane (ver
+# ideas/nfs_provisioners_control_plane_affinity.md).
 
 nfs:
   server: 192.168.3.103
@@ -15,3 +23,27 @@ storageClass:
   defaultClass: false
   reclaimPolicy: Delete
   accessModes: ReadWriteOnce
+
+# Fixa o provisioner no control-plane - único node que fica ligado 24/7 (workers e
+# o host TrueNAS são desligados durante a madrugada, ver ia/CLAUDE.md, "Gerenciamento
+# de energia"). Motivação: uma queda do worker1 (ver
+# troubleshooting/worker1_unexpected_poweroff_investigation.md) derrubou este pod
+# justamente nele, travando o provisionamento dinâmico de PVC pro cluster inteiro -
+# inclusive impedindo criação de pods saudáveis no worker2 (ver
+# ideas/nfs_provisioners_control_plane_affinity.md). Mesmo padrão de nodeAffinity já
+# usado pelo coredns-bypass (apps/core-dns/deployment.yaml) e pelo Kube-VIP
+# (clusters/kube-vip/arp.yaml).
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+
+# Necessário pra driblar o taint padrão que impede pods comuns de rodarem no
+# control-plane (mesmo padrão do coredns-bypass).
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
