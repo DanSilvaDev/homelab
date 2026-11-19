@@ -28,7 +28,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 
 | Nome | Tipo | Tamanho/Recordsize | Compressão | Uso |
 |---|---|---|---|---|
-| `vm-k3s-disk` | zvol | 40 GiB (volblocksize 16K) | LZ4 | Disco virtual exclusivo da VM worker2 |
+| `vm-k3s-disk` | zvol | 50 GiB, ampliado de 40 GiB em 2026-11-19 (volblocksize 16K) | LZ4 | Disco virtual exclusivo da VM worker2 |
 | `fast-data` | dataset | recordsize 128K | LZ4 | Storage rápido genérico (NFS), inclui pasta `os_images` com ISOs |
 | `databases` | dataset | recordsize 16K | LZ4 | Reservado para Postgres/Redis (recordsize ajustado ao page size) |
 
@@ -71,7 +71,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 - Tipo: Existing zvol
 - Caminho: `/dev/zvol/ssd-apps/vm-k3s-disk`
 - Barramento: VirtIO
-- Tamanho: 40 GiB
+- Tamanho: 50 GiB (ampliado de 40 GiB em 2026-11-19 — zvol no TrueNAS + `growpart`/`pvresize`/`lvextend -r` dentro da VM; ver [troubleshooting/worker2_vm_disk_not_resized_after_zvol_expand.md](../../troubleshooting/worker2_vm_disk_not_resized_after_zvol_expand.md))
 
 ### Rede
 - Adapter Type: VirtIO

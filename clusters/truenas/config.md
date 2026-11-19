@@ -49,7 +49,7 @@ Finalidade: armazenamento veloz para VM/Kubernetes
 
 | Nome | Tipo | Config | Uso |
 |---|---|---|---|
-| `vm-k3s-disk` | zvol | 40 GiB, volblocksize 16K, LZ4, sync Standard, sparse off, dedup off | Disco virtual exclusivo da VM worker2 |
+| `vm-k3s-disk` | zvol | 50 GiB (ampliado de 40 GiB em 2026-11-19), volblocksize 16K, LZ4, sync Standard, sparse off, dedup off | Disco virtual exclusivo da VM worker2 |
 | `fast-data` | dataset | recordsize 128K, LZ4, sync Standard, atime off | Storage rápido genérico via NFS; contém `os_images/` (ISOs de instalação) |
 | `databases` | dataset | recordsize 16K, LZ4, sync Standard | Reservado para bancos (Postgres/Redis) — recordsize ajustado ao page size dessas engines |
 | `k8s` | dataset | recordsize 128K, LZ4, sync Standard, quota ~40GiB | Export NFS para PVs dinâmicos do cluster k3s (kube-prometheus-stack, Loki) via `nfs-subdir-external-provisioner`. Hosts autorizados: `192.168.3.100` (control-plane — IP real da interface física, reserva DHCP fixa; não confundir com `192.168.3.101`, que é só o IP virtual do Kube-VIP pra API), `192.168.3.102` (worker1), `192.168.3.105` (worker2) |
