@@ -28,7 +28,7 @@ Quando uma ideia for implementada: a implementação real já gera seus próprio
 | Acesso remoto via Tailscale (media stack, ntfy, outros serviços LAN-only) | media stack, ntfy | 2026-10-27 | [tailscale_remote_access.md](ideas/tailscale_remote_access.md) |
 | Suporte a Usenet (SABnzbd/NZBGet) como fonte de download adicional na media stack | media stack | 2026-11-08 | — |
 | Jellystat (estatísticas de uso do Jellyfin, equivalente ao Tautulli) | Jellyfin | 2026-11-08 | — |
-| Split do dataset `Backups` do TrueNAS em sub-datasets por fonte (ex: `smb-pc`, `nfs-k3s`) para retenção/quota independentes | TrueNAS | 2026-10-24 | — |
+| Split do dataset `backups` do TrueNAS em sub-datasets por fonte (ex: `smb-pc`, `nfs-k3s`) para retenção/quota independentes | TrueNAS | 2026-10-24 | — |
 
 ---
 
@@ -56,4 +56,4 @@ When an idea gets implemented: the actual implementation already generates its o
 | Remote access via Tailscale (media stack, ntfy, other LAN-only services) | media stack, ntfy | 2026-10-27 | [tailscale_remote_access.md](ideas/tailscale_remote_access.md) |
 | Usenet support (SABnzbd/NZBGet) as an additional download source for the media stack | media stack | 2026-11-08 | — |
 | Jellystat (Jellyfin usage statistics, Tautulli equivalent) | Jellyfin | 2026-11-08 | — |
-| Split the TrueNAS `Backups` dataset into per-source sub-datasets (e.g. `smb-pc`, `nfs-k3s`) for independent retention/quota | TrueNAS | 2026-10-24 | — |
+| Split the TrueNAS `backups` dataset into per-source sub-datasets (e.g. `smb-pc`, `nfs-k3s`) for independent retention/quota | TrueNAS | 2026-10-24 | — |

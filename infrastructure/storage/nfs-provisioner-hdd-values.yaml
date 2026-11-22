@@ -41,8 +41,10 @@ affinity:
             - key: node-role.kubernetes.io/control-plane
               operator: Exists
 
-# Necessário pra driblar o taint padrão que impede pods comuns de rodarem no
-# control-plane (mesmo padrão do coredns-bypass).
+# Necessário pro taint `node-role.kubernetes.io/control-plane:NoSchedule` que impede
+# pods comuns de rodarem no control-plane (mesmo padrão do coredns-bypass). O k3s NÃO
+# aplica esse taint por padrão (diferente do kubeadm) - ele só passou a existir em
+# 2026-11-22, aplicado manualmente; antes disso esta toleration era inócua.
 tolerations:
   - key: node-role.kubernetes.io/control-plane
     operator: Exists

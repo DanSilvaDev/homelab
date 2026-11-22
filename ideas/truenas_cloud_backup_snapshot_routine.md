@@ -19,9 +19,9 @@ A ideia tem duas partes complementares:
 ### Considerações / perguntas em aberto
 
 - **Destino da nuvem**: Backblaze B2, AWS S3 Glacier, ou outro provedor compatível com `rclone`/a task nativa de Cloud Sync do TrueNAS — avaliar custo de armazenamento + egress pro volume real de dados.
-- **Escopo**: quais datasets realmente precisam de backup externo — provavelmente não o `k8s` (PVs dinâmicos recriáveis via manifests + reinstalação de apps), mas sim `Backups`, `databases`, e qualquer dado irrecriável (ex: biblioteca de mídia adquirida, se o custo de re-obter for alto).
+- **Escopo**: quais datasets realmente precisam de backup externo — provavelmente não o `k8s` (PVs dinâmicos recriáveis via manifests + reinstalação de apps), mas sim `backups`, `databases`, e qualquer dado irrecriável (ex: biblioteca de mídia adquirida, se o custo de re-obter for alto).
 - **Frequência/retenção**: tanto pros snapshots locais (ex: horário/diário com retenção curta, semanal/mensal com retenção mais longa) quanto pro backup externo (provavelmente menos frequente que os snapshots locais, dado o custo de egress).
-- **Relação com o split do dataset `Backups`**: a [ideia já registrada de dividir `Backups` em sub-datasets por fonte](../ideas.md) (`smb-pc`, `nfs-k3s`) facilitaria aplicar políticas de snapshot/retenção diferentes por origem dos dados — vale considerar as duas ideias juntas.
+- **Relação com o split do dataset `backups`**: a [ideia já registrada de dividir `backups` em sub-datasets por fonte](../ideas.md) (`smb-pc`, `nfs-k3s`) facilitaria aplicar políticas de snapshot/retenção diferentes por origem dos dados — vale considerar as duas ideias juntas.
 - **etcd do control-plane**: já documentado separadamente em `clusters/truenas/config.md` (item sobre mover o SSD do control-plane) que o cluster não tem HA de etcd — um `k3s etcd-snapshot save` periódico também merece entrar nesse guarda-chuva de "rotina de backup", mesmo não sendo um dataset do TrueNAS.
 
 ---
@@ -41,7 +41,7 @@ The idea has two complementary parts:
 ### Considerations / open questions
 
 - **Cloud destination**: Backblaze B2, AWS S3 Glacier, or another provider compatible with `rclone`/TrueNAS's native Cloud Sync task — evaluate storage + egress cost for the actual data volume.
-- **Scope**: which datasets actually need offsite backup — probably not `k8s` (dynamic PVs, recreatable via manifests + app reinstallation), but `Backups`, `databases`, and any non-recreatable data (e.g. an acquired media library, if the cost of re-obtaining it is high).
+- **Scope**: which datasets actually need offsite backup — probably not `k8s` (dynamic PVs, recreatable via manifests + app reinstallation), but `backups`, `databases`, and any non-recreatable data (e.g. an acquired media library, if the cost of re-obtaining it is high).
 - **Frequency/retention**: both for local snapshots (e.g. hourly/daily with short retention, weekly/monthly with longer retention) and for the offsite backup (probably less frequent than local snapshots, given egress cost).
-- **Relationship with the `Backups` dataset split**: the [already-logged idea to split `Backups` into per-source sub-datasets](../ideas.md) (`smb-pc`, `nfs-k3s`) would make it easier to apply different snapshot/retention policies per data source — worth considering the two ideas together.
+- **Relationship with the `backups` dataset split**: the [already-logged idea to split `backups` into per-source sub-datasets](../ideas.md) (`smb-pc`, `nfs-k3s`) would make it easier to apply different snapshot/retention policies per data source — worth considering the two ideas together.
 - **control-plane etcd**: already separately documented in `clusters/truenas/config.md` (the item about moving the control-plane's SSD) that the cluster has no etcd HA — a periodic `k3s etcd-snapshot save` also deserves to fall under this "backup routine" umbrella, even though it's not a TrueNAS dataset.

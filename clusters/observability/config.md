@@ -298,7 +298,12 @@ kubectl get svc -n monitoring | grep loki
 
 helm upgrade --install alloy grafana/alloy \
   --namespace monitoring \
-  -f infrastructure/logging/alloy-values.yaml
+  -f infrastructure/logging/alloy-values.yaml \
+  --version 1.14.3   # versão fixada em 2026-11-22 (antes sem --version: um upgrade atualizaria o chart sem querer)
+
+# 2026-11-22: tolerations pro taint NoSchedule do control-plane (controller.tolerations no
+# Alloy, lokiCanary.tolerations no Loki) - aplicadas com o mesmo comando, versões fixas,
+# conferidas antes com --dry-run | grep -A4 'tolerations:'
 
 # Reaplica o kube-prometheus-stack com o datasource Loki no Grafana
 helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \

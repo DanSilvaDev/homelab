@@ -90,3 +90,12 @@ monitoring:
 
 minio:
   enabled: false
+
+# loki-canary (DaemonSet) - toleration pro taint NoSchedule do control-plane
+# (aplicado em 2026-11-22), pra continuar validando a ingestão de logs a partir
+# de todos os nodes, inclusive o control-plane. Mesmo padrão do Alloy.
+lokiCanary:
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
