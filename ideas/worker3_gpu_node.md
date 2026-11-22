@@ -6,7 +6,7 @@
 
 ## Português
 
-**Status**: Ideia — não implementada (hardware já montado, plano em definição).
+**Status**: Em implementação — fases 0 e 1 concluídas (worker3 no cluster como `agent` desde 2026-11-22; estado atual em [clusters/worker3/config.md](../clusters/worker3/config.md)). Próximo: migração SQLite → etcd ([control_plane_sqlite_to_etcd_migration.md](control_plane_sqlite_to_etcd_migration.md)), depois a fase 2.
 **Componente(s) relacionado(s)**: worker3 (node novo), Jellyfin, Wolf/Moonlight (streaming de jogos), Ollama/Open WebUI (IA local), worker2 (GTX 970), observabilidade, ciclo de energia.
 **Origem**: sessão de planejamento de 2026-11-19 — o usuário montou uma máquina nova para entrar no cluster como `worker3`.
 
@@ -17,7 +17,7 @@ O `worker3` passa a ser o nó "GPU de verdade" do cluster, com três papéis: **
 | Item | Detalhe |
 |---|---|
 | CPU | AMD Ryzen 7 5700X (Zen 3, 8C/16T, **sem vídeo integrado**, PPT padrão 76 W) |
-| Placa-mãe | ASUS TUF B550-Plus |
+| Placa-mãe | ASUS TUF GAMING B550M-PLUS (micro-ATX; modelo confirmado via `hostnamectl` em 2026-11-21 — antes registrado como "TUF B550-Plus"), BIOS 3636 |
 | RAM | 32 GB DDR4 |
 | GPU | AMD Radeon RX 9070 16 GB (RDNA4) |
 | Storage | NVMe Lexar NM790 512 GB (upgrade para um disco maior planejado) |
@@ -66,7 +66,7 @@ Orçamento aproximado:
 - **A IA cabe tranquilamente — o gargalo são os jogos.**
 - **Separar em LVM**: um volume para sistema + k3s + imagens, outro para "Steam + modelos". Motivo: se a biblioteca da Steam encher o disco do sistema, o kubelet entra em **`DiskPressure`** e começa a **expulsar pods** (Jellyfin incluso).
 - Biblioteca da Steam e modelos **no NVMe local**, nunca via NFS. PVCs locais via `local-path-provisioner` (já embutido no k3s), naturalmente fixados no worker3.
-- **NVMe futuro**: na TUF B550-Plus, o slot M.2_1 é PCIe 4.0 direto da CPU (onde fica o NM790) e o M.2_2 é PCIe 3.0 via chipset — suficiente para jogos/modelos. Confirmar no manual se o M.2_2 compartilha lanes com alguma porta SATA. Com o disco novo, a Steam muda para ele.
+- **NVMe futuro**: na TUF GAMING B550M-PLUS, o slot M.2_1 deve ser PCIe 4.0 direto da CPU (onde fica o NM790) e o M.2_2 é PCIe 3.0 via chipset — suficiente para jogos/modelos. Confirmar no manual **desta placa** (o layout foi levantado para a B550-Plus ATX) se o M.2_2 compartilha lanes com alguma porta SATA. Com o disco novo, a Steam muda para ele.
 
 ### Jellyfin
 
@@ -90,7 +90,7 @@ Importante: **limitar potência economiza sob carga, não em idle** — em idle 
 - **GPU**: reduzir o power limit da RX 9070 (220 W de fábrica) via sysfs do `amdgpu` (`power1_cap`) — a faixa permitida depende da placa. Undervolt também é possível em RDNA4.
 
 **Em idle:**
-- **BIOS**: Global C-states ligado; "Power Supply Idle Control" em **Low Current Idle**; **PCIe ASPM** ligado; **CPPC** ligado (habilita o driver `amd-pstate`); ErP ligado; desligar o que não usa (RGB, áudio onboard).
+- **BIOS**: Global C-states ligado; "Power Supply Idle Control" em **Low Current Idle**; **PCIe ASPM** ligado; **CPPC** ligado (habilita o driver `amd-pstate`); **ErP desligado** — nas placas ASUS, ligar o ErP Ready corta a energia de standby e desativa o "Power On By PCI-E", ou seja, mata o Wake-on-LAN (conflito identificado em 2026-11-21; WoL tem prioridade); desligar o que não usa (RGB, áudio onboard).
 - **Linux**: driver `amd-pstate-epp` com EPP em `balance_power`, aplicado via unit systemd simples — sem instalar `tuned`/`powertop` permanentemente (convenção de nodes limpos/neutros).
 - **GPU headless**: sem monitor conectado a RX 9070 tende a ter idle baixo; `keep_alive` curto no Ollama libera a VRAM e deixa a GPU baixar de estado.
 
@@ -107,7 +107,7 @@ Importante: **limitar potência economiza sob carga, não em idle** — em idle 
 ### Fases propostas
 
 0. **Pré-checagens**: tipo de datastore do k3s no control-plane, snapshot antes de mexer no cluster.
-1. **Worker3 base**: BIOS (energia, WoL, Resizable BAR), Ubuntu Server 26.04 com LVM separado, join como `agent` (binário via `scp`, mesmo bloqueio de ISP já documentado), validar GPU (`vainfo`, `rocminfo`).
+1. **Worker3 base**: BIOS (energia, WoL, Resizable BAR), Ubuntu Server 26.04 com LVM separado, join como `agent` (binário via `scp`, mesmo bloqueio de ISP já documentado), validar GPU (`vainfo`, `rocminfo`). ✅ 2026-11-22 — GPU validada só no nível do kernel (`renderD128`, `/dev/kfd`, firmware); `vainfo`/`rocminfo` ficam para dentro de um container na fase 2, sem instalar no host (nodes limpos).
 2. **GPU no k8s + migração do Jellyfin** (VA-API, cache de transcode local).
 3. **Ollama + Open WebUI** (modelos no volume local, `keep_alive` curto).
 4. **Wolf** (streaming de jogos) + Moonlight "Wake PC".
@@ -128,7 +128,7 @@ HA do control-plane fica fora deste plano — ver [multi_control_plane_ha.md](mu
 
 ## English
 
-**Status**: Idea — not implemented (hardware already assembled, plan being defined).
+**Status**: In progress — phases 0 and 1 done (worker3 in the cluster as an `agent` since 2026-11-22; current state in [clusters/worker3/config.md](../clusters/worker3/config.md)). Next: SQLite → etcd migration ([control_plane_sqlite_to_etcd_migration.md](control_plane_sqlite_to_etcd_migration.md)), then phase 2.
 **Related component(s)**: worker3 (new node), Jellyfin, Wolf/Moonlight (game streaming), Ollama/Open WebUI (local AI), worker2 (GTX 970), observability, power cycle.
 **Origin**: planning session on 2026-11-19 — the user built a new machine to join the cluster as `worker3`.
 
@@ -139,7 +139,7 @@ HA do control-plane fica fora deste plano — ver [multi_control_plane_ha.md](mu
 | Item | Detail |
 |---|---|
 | CPU | AMD Ryzen 7 5700X (Zen 3, 8C/16T, **no integrated graphics**, default PPT 76 W) |
-| Motherboard | ASUS TUF B550-Plus |
+| Motherboard | ASUS TUF GAMING B550M-PLUS (micro-ATX; model confirmed via `hostnamectl` on 2026-11-21 — previously recorded as "TUF B550-Plus"), BIOS 3636 |
 | RAM | 32 GB DDR4 |
 | GPU | AMD Radeon RX 9070 16 GB (RDNA4) |
 | Storage | Lexar NM790 512 GB NVMe (upgrade to a larger drive planned) |
@@ -188,7 +188,7 @@ Rough budget:
 - **AI fits easily — games are the bottleneck.**
 - **Split with LVM**: one volume for system + k3s + images, another for "Steam + models". Reason: if the Steam library fills the system disk, the kubelet enters **`DiskPressure`** and starts **evicting pods** (Jellyfin included).
 - Steam library and models **on the local NVMe**, never over NFS. Local PVCs via `local-path-provisioner` (already built into k3s), naturally pinned to worker3.
-- **Future NVMe**: on the TUF B550-Plus, slot M.2_1 is PCIe 4.0 straight from the CPU (where the NM790 sits) and M.2_2 is PCIe 3.0 via the chipset — enough for games/models. Check the manual for whether M.2_2 shares lanes with any SATA port. With the new drive, Steam moves to it.
+- **Future NVMe**: on the TUF GAMING B550M-PLUS, slot M.2_1 should be PCIe 4.0 straight from the CPU (where the NM790 sits) and M.2_2 is PCIe 3.0 via the chipset — enough for games/models. Check **this board's** manual (the layout was researched for the ATX B550-Plus) for whether M.2_2 shares lanes with any SATA port. With the new drive, Steam moves to it.
 
 ### Jellyfin
 
@@ -212,7 +212,7 @@ Important: **power limits save energy under load, not at idle** — at idle the 
 - **GPU**: lower the RX 9070's power limit (220 W stock) via `amdgpu` sysfs (`power1_cap`) — the allowed range depends on the card. Undervolting is also possible on RDNA4.
 
 **At idle:**
-- **BIOS**: Global C-states on; "Power Supply Idle Control" set to **Low Current Idle**; **PCIe ASPM** on; **CPPC** on (enables the `amd-pstate` driver); ErP on; disable unused features (RGB, onboard audio).
+- **BIOS**: Global C-states on; "Power Supply Idle Control" set to **Low Current Idle**; **PCIe ASPM** on; **CPPC** on (enables the `amd-pstate` driver); **ErP off** — on ASUS boards, enabling ErP Ready cuts standby power and disables "Power On By PCI-E", i.e. it kills Wake-on-LAN (conflict identified on 2026-11-21; WoL takes priority); disable unused features (RGB, onboard audio).
 - **Linux**: `amd-pstate-epp` driver with EPP at `balance_power`, applied via a simple systemd unit — without permanently installing `tuned`/`powertop` (clean/neutral nodes convention).
 - **Headless GPU**: with no monitor attached the RX 9070 tends to idle low; a short `keep_alive` in Ollama frees VRAM and lets the GPU drop into a lower power state.
 
@@ -229,7 +229,7 @@ Important: **power limits save energy under load, not at idle** — at idle the 
 ### Proposed phases
 
 0. **Pre-checks**: k3s datastore type on the control-plane, snapshot before touching the cluster.
-1. **Worker3 base**: BIOS (power, WoL, Resizable BAR), Ubuntu Server 26.04 with split LVM, join as `agent` (binary via `scp`, same ISP block already documented), validate GPU (`vainfo`, `rocminfo`).
+1. **Worker3 base**: BIOS (power, WoL, Resizable BAR), Ubuntu Server 26.04 with split LVM, join as `agent` (binary via `scp`, same ISP block already documented), validate GPU (`vainfo`, `rocminfo`). ✅ 2026-11-22 — GPU validated at kernel level only (`renderD128`, `/dev/kfd`, firmware); `vainfo`/`rocminfo` move into a container in phase 2, not installed on the host (clean nodes).
 2. **GPU in k8s + Jellyfin migration** (VA-API, local transcode cache).
 3. **Ollama + Open WebUI** (models on the local volume, short `keep_alive`).
 4. **Wolf** (game streaming) + Moonlight "Wake PC".

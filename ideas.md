@@ -12,6 +12,7 @@ Quando uma ideia for implementada: a implementação real já gera seus próprio
 
 | Ideia | Componente | Data | Link |
 |---|---|---|---|
+| Migrar o datastore do control-plane de SQLite para etcd embutido (`--cluster-init`) — snapshots automáticos, pré-requisito do HA; previsto logo após a entrada do worker3 | control-plane, Kube-VIP, backup do datastore | 2026-11-21 | [control_plane_sqlite_to_etcd_migration.md](ideas/control_plane_sqlite_to_etcd_migration.md) |
 | Worker3 como nó GPU dedicado (Jellyfin, streaming de jogos, IA local) + estratégias de economia de energia | worker3 (novo node), Jellyfin, Wolf, Ollama/Open WebUI | 2026-11-19 | [worker3_gpu_node.md](ideas/worker3_gpu_node.md) |
 | Raspberry Pi 3 como utilitário 24/7 fora do cluster (Ansible, WoL, monitoramento externo, detecção de queda de energia via NUT) | Raspberry Pi 3, ciclo de energia, nobreaks | 2026-11-19 | [raspberry_pi3_utility_node.md](ideas/raspberry_pi3_utility_node.md) |
 | Novos usos para a GTX 970 depois que o Jellyfin migrar (Whisper, IA leve, Immich — ou remover) | worker2 (GTX 970), TrueNAS | 2026-11-19 | [gtx970_reuse_after_jellyfin_migration.md](ideas/gtx970_reuse_after_jellyfin_migration.md) |
@@ -39,6 +40,7 @@ When an idea gets implemented: the actual implementation already generates its o
 
 | Idea | Component | Date | Link |
 |---|---|---|---|
+| Migrate the control-plane datastore from SQLite to embedded etcd (`--cluster-init`) — automatic snapshots, HA prerequisite; planned right after worker3 joins | control-plane, Kube-VIP, datastore backup | 2026-11-21 | [control_plane_sqlite_to_etcd_migration.md](ideas/control_plane_sqlite_to_etcd_migration.md) |
 | Worker3 as a dedicated GPU node (Jellyfin, game streaming, local AI) + power-saving strategies | worker3 (new node), Jellyfin, Wolf, Ollama/Open WebUI | 2026-11-19 | [worker3_gpu_node.md](ideas/worker3_gpu_node.md) |
 | Raspberry Pi 3 as a 24/7 utility outside the cluster (Ansible, WoL, external monitoring, power outage detection via NUT) | Raspberry Pi 3, power cycle, UPSes | 2026-11-19 | [raspberry_pi3_utility_node.md](ideas/raspberry_pi3_utility_node.md) |
 | New uses for the GTX 970 after Jellyfin moves (Whisper, light AI, Immich — or remove it) | worker2 (GTX 970), TrueNAS | 2026-11-19 | [gtx970_reuse_after_jellyfin_migration.md](ideas/gtx970_reuse_after_jellyfin_migration.md) |
