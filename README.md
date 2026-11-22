@@ -26,7 +26,7 @@ apps/                      Manifestos de aplicações rodando no cluster
   pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, config
   core-dns/                  CoreDNS - fallback de DNS que assume o IP do Pi-hole via Kube-VIP quando ele fica indisponível (ver "Gerenciamento de energia" abaixo)
   ntfy/                      ntfy self-hosted (push notifications) - deployment, service, PVC
-  gpu-test/                  Pod de teste usado para validar alocação de GPU (benchmark CUDA)
+  gpu-test/                  Pods de teste para validar alocação de GPU (benchmark CUDA na GTX 970, VA-API na RX 9070)
   grafana/alerts/            Export versionado de regras de alerta nativas do Grafana (backup, não aplicado automaticamente)
   helpers/                   Templates de pods temporários reutilizáveis (ex: migração de dados entre storage)
 
@@ -43,6 +43,7 @@ infrastructure/            Configuração de ferramentas de infraestrutura do cl
   monitoring/                Values do kube-prometheus-stack (Prometheus, Grafana, Alertmanager)
   logging/                   Values do Loki + Grafana Alloy (agregação de logs)
   gpu-monitoring/            Values do dcgm-exporter + ConfigMap do dashboard (métricas de GPU)
+  amd-gpu/                   generic-device-plugin que expõe a RX 9070 do worker3 aos pods (devic.es/amdgpu)
   storage/                   Values dos provisioners NFS dinâmicos (TrueNAS SSD e HDD)
 
 troubleshooting/           Post-mortems de problemas reais já diagnosticados e resolvidos
@@ -108,7 +109,7 @@ apps/                      Application manifests running on the cluster
   pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, config
   core-dns/                  CoreDNS - DNS fallback that takes over Pi-hole's Kube-VIP IP when it's unavailable (see "Power management" below)
   ntfy/                      Self-hosted ntfy (push notifications) - deployment, service, PVC
-  gpu-test/                  Test pod used to validate GPU allocation (CUDA benchmark)
+  gpu-test/                  Test pods to validate GPU allocation (CUDA benchmark on the GTX 970, VA-API on the RX 9070)
   grafana/alerts/            Versioned export of native Grafana alert rules (backup, not auto-applied)
   helpers/                   Reusable temporary pod templates (e.g. data migration between storage backends)
 
@@ -125,6 +126,7 @@ infrastructure/            Cluster infrastructure tooling configuration
   monitoring/                kube-prometheus-stack values (Prometheus, Grafana, Alertmanager)
   logging/                   Loki + Grafana Alloy values (log aggregation)
   gpu-monitoring/            dcgm-exporter values + dashboard ConfigMap (GPU metrics)
+  amd-gpu/                   generic-device-plugin exposing worker3's RX 9070 to pods (devic.es/amdgpu)
   storage/                   Dynamic NFS provisioner values (TrueNAS SSD and HDD)
 
 troubleshooting/           Post-mortems of real issues already diagnosed and resolved

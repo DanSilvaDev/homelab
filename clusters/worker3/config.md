@@ -1,7 +1,7 @@
 # Worker3 (k3s) - Resumo de Configuração
 
 Host físico: desktop dedicado (bare metal, sem virtualização)
-Status: **No cluster como `agent` desde 2026-11-22** (`v1.36.5+k3s1`, ROLES `worker`). GPU reconhecida pelo kernel, mas ainda **sem workloads de GPU** — Jellyfin continua no worker2 até a fase 2.
+Status: **No cluster como `agent` desde 2026-11-22** (`v1.36.5+k3s1`, ROLES `worker`). GPU exposta no k8s via generic-device-plugin (`devic.es/amdgpu`) e **Jellyfin rodando aqui com VA-API** desde 2026-11-22 (fase 2 concluída).
 
 Papel planejado: nó "GPU de verdade" do cluster — Jellyfin (migra do worker2), streaming de jogos (Wolf/Moonlight) e IA local (Ollama/Open WebUI). Plano completo e decisões: [ideas/worker3_gpu_node.md](../../ideas/worker3_gpu_node.md).
 
@@ -44,10 +44,24 @@ Adiados (medir consumo antes): PCIe ASPM (histórico de instabilidade de NIC no 
 ### GPU
 
 - Driver `amdgpu` do kernel (in-tree) — sem DKMS, sem ROCm no host (o userspace ROCm/Mesa vai dentro das imagens dos containers)
-- Device files: `/dev/dri/card1`, `/dev/dri/renderD128` (VA-API/Vulkan), `/dev/kfd` (ROCm)
+- Device files: `/dev/dri/cardN` (o índice **não é estável** entre boots — era `card1` na instalação, sumiu após um reboot; localizar com `ls -l /sys/class/drm/ | grep -E 'card[0-9] '`), `/dev/dri/renderD128` (VA-API/Vulkan), `/dev/kfd` (ROCm) — os dois últimos são `root:render 660`, grupo `render` = **GID 991**
 - Firmware carregado: DMUB via PSP (`0x0A000800`), VCN (ENC 1.12 / DEC 9)
 - `Failed to setup vendor infoframe on connector HDMI-A-1: -22` no `dmesg` — inofensivo (monitor conectado durante a instalação)
 - Diferente do worker2 (NVIDIA): **não precisa** de runtime customizado no containerd
+
+### GPU no Kubernetes (fase 2, 2026-11-22)
+
+- Label do node: **`gpu-vendor=amd`** — não usar `gpu=true` (é o `nodeSelector` do `nvidia-device-plugin` e do `dcgm-exporter`, que subiriam aqui)
+- Device plugin: [`infrastructure/amd-gpu/generic-device-plugin.yaml`](../../infrastructure/amd-gpu/generic-device-plugin.yaml) (`squat/generic-device-plugin:f7c3291`, DaemonSet no `kube-system`, restrito a `gpu-vendor=amd`)
+  - Recurso **`devic.es/amdgpu`**, `count: 3` (allocatable `3`) — cada alocação injeta `/dev/dri/renderD128` + `/dev/kfd`; até 3 pods compartilham a placa (Jellyfin + Ollama + Wolf), sem isolamento
+  - O domínio default do plugin mudou de `squat.ai` (ainda citado no README do projeto) para `devic.es` — fixado com `--domain devic.es` para um bump de imagem não renomear o recurso
+  - Escolhido em vez do plugin oficial da AMD (`amd.com/gpu`, 1 GPU = 1 pod) e de pod `privileged` com hostPath
+- Pods que não rodam como root precisam de `securityContext.supplementalGroups: [991]`
+- Validação VA-API ([`apps/gpu-test/amd-vaapi-test-pod.yaml`](../../apps/gpu-test/amd-vaapi-test-pod.yaml), mesma imagem/usuário do Jellyfin): `Mesa Gallium driver 26.0.8 for AMD Radeon RX 9070 (radeonsi, gfx1201)` — vem dentro da imagem (`jellyfin-ffmpeg`), nada instalado no host
+  - Decode: H.264, HEVC 8/10-bit, VP9 8/10-bit, AV1 8/10-bit, JPEG
+  - Encode: H.264, HEVC 8/10-bit, AV1 8-bit
+- **Monitorar uso de vídeo**: `gpu_busy_percent` mede só o bloco 3D (GFX) e fica ~0 durante transcode. O uso do VCN aparece por processo no fdinfo do `amdgpu`: `sudo grep -hE 'drm-engine|drm-memory-vram' /proc/<pid-do-ffmpeg>/fdinfo/*` (contadores `drm-engine-enc`/`dec` em ns crescendo). Painel de verdade fica para a fase 5 (observabilidade de energia)
+- **Jellyfin** migrado para cá — ver [Media Stack - config.md](../media-stack/config.md)
 
 ### Storage (LVM)
 
@@ -64,12 +78,12 @@ Adiados (medir consumo antes): PCIe ASPM (histórico de instabilidade de NIC no 
 |---|---|---|
 | control-plane (`kubecluster-lenovo-z40-70`) | `192.168.3.100` (VIP da API: `192.168.3.101`) | server (`control-plane,etcd,master`), datastore etcd embutido (migrado de SQLite em 2026-11-22) |
 | worker1 | `192.168.3.102` | agent (`worker`) |
-| worker2 | `192.168.3.105` | agent (`worker`, GTX 970, label `gpu=true`) |
-| worker3 | `192.168.3.106` | agent (`worker`, RX 9070) — ingressou em 2026-11-22, apontando para o VIP `https://192.168.3.101:6443` |
+| worker2 | `192.168.3.105` | agent (`worker`, GTX 970, label `gpu=true`) — sem Jellyfin desde 2026-11-22 |
+| worker3 | `192.168.3.106` | agent (`worker`, RX 9070, label `gpu-vendor=amd`) — ingressou em 2026-11-22, apontando para o VIP `https://192.168.3.101:6443`; roda o Jellyfin |
 
 Desligamento noturno: o worker3 entra na mesma janela de desligamento da madrugada que worker1, worker2 e o TrueNAS (decisão de 2026-11-22) — ver "Gerenciamento de energia" em [`ia/CLAUDE.md`](../../ia/CLAUDE.md). Religar via Wake-on-LAN (BIOS + netplan; testado em 2026-11-22 com magic packet enviado do control-plane).
 
-Sem taint no worker3 por enquanto: aceita qualquer workload como um worker comum. Reservar o node para GPU (taint + tolerations) fica para a decisão da fase 2.
+Sem taint no worker3 por enquanto: aceita qualquer workload como um worker comum (32 GB dão conta da media stack + o que vier). Decisão de 2026-11-22, na fase 2 — reavaliar nas fases 3/4, quando Ollama e Wolf passarem a disputar VRAM/RAM.
 
 ### Próximos passos
 - [x] BIOS (CPPC, Above 4G/ReBAR, CSM off, WoL, ErP off, curva dos fans)
@@ -85,7 +99,8 @@ Sem taint no worker3 por enquanto: aceita qualquer workload como um worker comum
 - [x] Drop-in do SSH confirmado após a reinstalação (`sshd -T`: `passwordauthentication no`, `kbdinteractiveauthentication no`)
 - [x] Migração SQLite → etcd no control-plane (2026-11-22) — ver [control_plane_1/config.md](../control_plane_1/config.md)
 - [x] Confirmar C-states (`cpuidle`: `POLL`, `C1`, `C2`)
-- [ ] Fase 2: GPU no k8s + migração do Jellyfin — ver [ideas/worker3_gpu_node.md](../../ideas/worker3_gpu_node.md)
+- [x] Fase 2: GPU no k8s (generic-device-plugin, `devic.es/amdgpu`) + Jellyfin migrado do worker2 com VA-API e cache local (2026-11-22) — transcode validado (`h264 -> hevc (hevc_vaapi)`, `scale_vaapi`)
+- [ ] Fase 3: Ollama + Open WebUI — ver [ideas/worker3_gpu_node.md](../../ideas/worker3_gpu_node.md)
 
 ## Log de comandos executados
 
@@ -143,4 +158,22 @@ sudo poweroff
 # [control-plane] magic packet para o MAC do worker3 (python3 do sistema, sem instalar nada)
 python3 -c 'import socket;p=b"\xff"*6+bytes.fromhex("b082e24c5ad2")*16;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);s.setsockopt(socket.SOL_SOCKET,socket.SO_BROADCAST,1);s.sendto(p,("192.168.3.255",9))'
 kubectl get nodes -w                                                     # worker3 NotReady -> Ready
+
+# Fase 2 - GPU no k8s + Jellyfin (2026-11-22)
+# [worker3] GID dos device files
+stat -c '%n %U:%G %a gid=%g' /dev/dri/renderD128 /dev/kfd               # root:render 660 gid=991
+# [PC, Git Bash, raiz do repo]
+curl -s "https://hub.docker.com/v2/repositories/squat/generic-device-plugin/tags?page_size=15" | grep -oE '"name":"[^"]+"'
+kubectl label node worker3 gpu-vendor=amd
+kubectl apply -f infrastructure/amd-gpu/generic-device-plugin.yaml
+kubectl get node worker3 -o jsonpath='{.status.allocatable}{"\n"}'      # devic.es/amdgpu: 3
+kubectl apply -f apps/gpu-test/amd-vaapi-test-pod.yaml
+MSYS_NO_PATHCONV=1 kubectl exec amd-vaapi-test -- /usr/lib/jellyfin-ffmpeg/vainfo --display drm --device /dev/dri/renderD128
+kubectl delete -f apps/gpu-test/amd-vaapi-test-pod.yaml
+kubectl apply -f apps/jellyfin/cache-local-pvc.yaml
+kubectl apply -f apps/jellyfin/deployment.yaml
+kubectl -n media rollout status deploy/jellyfin-deployment --timeout=300s
+# Jellyfin UI: Painel -> Reprodução -> Transcodificação -> VAAPI, /dev/dri/renderD128
+# Validação do transcode pelo log do ffmpeg
+MSYS_NO_PATHCONV=1 kubectl -n media exec deploy/jellyfin-deployment -- sh -c 'f=$(ls -t /config/log/FFmpeg.Transcode-* | head -1); grep -m1 -A6 "Stream mapping" "$f"'
 ```

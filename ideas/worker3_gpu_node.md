@@ -6,7 +6,7 @@
 
 ## Português
 
-**Status**: Em implementação — fases 0 e 1 concluídas (worker3 no cluster como `agent` desde 2026-11-22; estado atual em [clusters/worker3/config.md](../clusters/worker3/config.md)). Migração SQLite → etcd do control-plane também concluída em 2026-11-22 ([control_plane_1/config.md](../clusters/control_plane_1/config.md)). Próximo: fase 2.
+**Status**: Em implementação — fases 0 e 1 concluídas (worker3 no cluster como `agent` desde 2026-11-22; estado atual em [clusters/worker3/config.md](../clusters/worker3/config.md)). Migração SQLite → etcd do control-plane também concluída em 2026-11-22 ([control_plane_1/config.md](../clusters/control_plane_1/config.md)). Fase 2 (GPU no k8s + Jellyfin) concluída em 2026-11-22. Próximo: fase 3 (Ollama).
 **Componente(s) relacionado(s)**: worker3 (node novo), Jellyfin, Wolf/Moonlight (streaming de jogos), Ollama/Open WebUI (IA local), worker2 (GTX 970), observabilidade, ciclo de energia.
 **Origem**: sessão de planejamento de 2026-11-19 — o usuário montou uma máquina nova para entrar no cluster como `worker3`.
 
@@ -71,7 +71,7 @@ Orçamento aproximado:
 ### Jellyfin
 
 - Transcodificação via **VA-API (Mesa)**. A RX 9070 faz encode/decode de H.264, HEVC (incluindo 10-bit) e **AV1** por hardware — salto grande em relação à GTX 970 (Maxwell).
-- **A validar**: RDNA4 exige **Mesa ≥ 25 e kernel ≥ 6.14**. O Ubuntu 26.04 atende no host, mas a **imagem do Jellyfin** precisa trazer um Mesa novo o suficiente.
+- ~~**A validar**: RDNA4 exige **Mesa ≥ 25 e kernel ≥ 6.14**~~ — ✅ validado em 2026-11-22: a imagem `jellyfin/jellyfin:12.4` traz Mesa 26.0.8 no `jellyfin-ffmpeg` (radeonsi, gfx1201); host com kernel 7.0.
 - A mídia continua no TrueNAS via NFS (`data/midias`, PV estático — ver [Media Stack - config.md](../clusters/media-stack/config.md)); o config PVC continua em `truenas-nfs-ssd`. Muda só onde o pod roda.
 - **Cache de transcode no NVMe local** em vez de NFS (menos tráfego de rede).
 - Libera o slot de time-slicing da GTX 970 — ver [gtx970_reuse_after_jellyfin_migration.md](gtx970_reuse_after_jellyfin_migration.md).
@@ -108,7 +108,7 @@ Importante: **limitar potência economiza sob carga, não em idle** — em idle 
 
 0. **Pré-checagens**: tipo de datastore do k3s no control-plane, snapshot antes de mexer no cluster.
 1. **Worker3 base**: BIOS (energia, WoL, Resizable BAR), Ubuntu Server 26.04 com LVM separado, join como `agent` (binário via `scp`, mesmo bloqueio de ISP já documentado), validar GPU (`vainfo`, `rocminfo`). ✅ 2026-11-22 — GPU validada só no nível do kernel (`renderD128`, `/dev/kfd`, firmware); `vainfo`/`rocminfo` ficam para dentro de um container na fase 2, sem instalar no host (nodes limpos).
-2. **GPU no k8s + migração do Jellyfin** (VA-API, cache de transcode local).
+2. **GPU no k8s + migração do Jellyfin** (VA-API, cache de transcode local). ✅ 2026-11-22 — generic-device-plugin (`devic.es/amdgpu`, `count: 3`), Jellyfin no worker3 transcodificando com `hevc_vaapi`; detalhes em [clusters/worker3/config.md](../clusters/worker3/config.md).
 3. **Ollama + Open WebUI** (modelos no volume local, `keep_alive` curto).
 4. **Wolf** (streaming de jogos) + Moonlight "Wake PC".
 5. **Observabilidade de energia** (RAPL/hwmon no Grafana, tomada com medição opcional).
@@ -118,8 +118,8 @@ HA do control-plane fica fora deste plano — ver [multi_control_plane_ha.md](mu
 
 ### Considerações / perguntas em aberto
 
-- A imagem oficial do Jellyfin traz Mesa ≥ 25 (suporte a RDNA4)?
-- generic-device-plugin vs. device plugin oficial da AMD — qual atende melhor o compartilhamento entre Jellyfin, Ollama e Wolf?
+- ~~A imagem oficial do Jellyfin traz Mesa ≥ 25 (suporte a RDNA4)?~~ — sim (Mesa 26.0.8, 2026-11-22).
+- ~~generic-device-plugin vs. device plugin oficial da AMD~~ — **generic-device-plugin** (2026-11-22): o oficial é 1 GPU = 1 pod. Falta validar na fase 3 se o ROCm do Ollama funciona com o `/dev/kfd` injetado por ele.
 - worker3 no ciclo noturno fixo vs. ligar sob demanda via WoL — o Jellyfin morando nele limita o "sob demanda".
 - Tamanho/momento do upgrade de disco.
 - Nobreak do worker3 e integração com NUT (ver [raspberry_pi3_utility_node.md](raspberry_pi3_utility_node.md)).
@@ -128,7 +128,7 @@ HA do control-plane fica fora deste plano — ver [multi_control_plane_ha.md](mu
 
 ## English
 
-**Status**: In progress — phases 0 and 1 done (worker3 in the cluster as an `agent` since 2026-11-22; current state in [clusters/worker3/config.md](../clusters/worker3/config.md)). The control-plane SQLite → etcd migration was also completed on 2026-11-22 ([control_plane_1/config.md](../clusters/control_plane_1/config.md)). Next: phase 2.
+**Status**: In progress — phases 0 and 1 done (worker3 in the cluster as an `agent` since 2026-11-22; current state in [clusters/worker3/config.md](../clusters/worker3/config.md)). The control-plane SQLite → etcd migration was also completed on 2026-11-22 ([control_plane_1/config.md](../clusters/control_plane_1/config.md)). Phase 2 (GPU in k8s + Jellyfin) done on 2026-11-22. Next: phase 3 (Ollama).
 **Related component(s)**: worker3 (new node), Jellyfin, Wolf/Moonlight (game streaming), Ollama/Open WebUI (local AI), worker2 (GTX 970), observability, power cycle.
 **Origin**: planning session on 2026-11-19 — the user built a new machine to join the cluster as `worker3`.
 
@@ -193,7 +193,7 @@ Rough budget:
 ### Jellyfin
 
 - Transcoding via **VA-API (Mesa)**. The RX 9070 does hardware encode/decode of H.264, HEVC (including 10-bit) and **AV1** — a big leap over the GTX 970 (Maxwell).
-- **To validate**: RDNA4 requires **Mesa ≥ 25 and kernel ≥ 6.14**. Ubuntu 26.04 covers the host, but the **Jellyfin image** needs to ship a recent enough Mesa.
+- ~~**To validate**: RDNA4 requires **Mesa ≥ 25 and kernel ≥ 6.14**~~ — ✅ validated on 2026-11-22: the `jellyfin/jellyfin:12.4` image ships Mesa 26.0.8 in `jellyfin-ffmpeg` (radeonsi, gfx1201); host on kernel 7.0.
 - Media stays on TrueNAS over NFS (`data/midias`, static PV — see [Media Stack - config.md](../clusters/media-stack/config.md)); the config PVC stays on `truenas-nfs-ssd`. Only where the pod runs changes.
 - **Transcode cache on the local NVMe** instead of NFS (less network traffic).
 - Frees the GTX 970's time-slicing slot — see [gtx970_reuse_after_jellyfin_migration.md](gtx970_reuse_after_jellyfin_migration.md).
@@ -230,7 +230,7 @@ Important: **power limits save energy under load, not at idle** — at idle the 
 
 0. **Pre-checks**: k3s datastore type on the control-plane, snapshot before touching the cluster.
 1. **Worker3 base**: BIOS (power, WoL, Resizable BAR), Ubuntu Server 26.04 with split LVM, join as `agent` (binary via `scp`, same ISP block already documented), validate GPU (`vainfo`, `rocminfo`). ✅ 2026-11-22 — GPU validated at kernel level only (`renderD128`, `/dev/kfd`, firmware); `vainfo`/`rocminfo` move into a container in phase 2, not installed on the host (clean nodes).
-2. **GPU in k8s + Jellyfin migration** (VA-API, local transcode cache).
+2. **GPU in k8s + Jellyfin migration** (VA-API, local transcode cache). ✅ 2026-11-22 — generic-device-plugin (`devic.es/amdgpu`, `count: 3`), Jellyfin on worker3 transcoding with `hevc_vaapi`; details in [clusters/worker3/config.md](../clusters/worker3/config.md).
 3. **Ollama + Open WebUI** (models on the local volume, short `keep_alive`).
 4. **Wolf** (game streaming) + Moonlight "Wake PC".
 5. **Power observability** (RAPL/hwmon in Grafana, optional metering plug).
@@ -240,8 +240,8 @@ Control-plane HA is out of scope for this plan — see [multi_control_plane_ha.m
 
 ### Considerations / open questions
 
-- Does the official Jellyfin image ship Mesa ≥ 25 (RDNA4 support)?
-- generic-device-plugin vs. AMD's official device plugin — which better handles sharing between Jellyfin, Ollama and Wolf?
+- ~~Does the official Jellyfin image ship Mesa ≥ 25 (RDNA4 support)?~~ — yes (Mesa 26.0.8, 2026-11-22).
+- ~~generic-device-plugin vs. AMD's official device plugin~~ — **generic-device-plugin** (2026-11-22): the official one is 1 GPU = 1 pod. Still to validate in phase 3 whether Ollama's ROCm works with the `/dev/kfd` it injects.
 - worker3 on a fixed overnight cycle vs. on-demand power-on via WoL — Jellyfin living on it limits "on-demand".
 - Size/timing of the disk upgrade.
 - worker3's UPS and NUT integration (see [raspberry_pi3_utility_node.md](raspberry_pi3_utility_node.md)).

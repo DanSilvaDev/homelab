@@ -39,8 +39,8 @@ ia/
 |---|---|---|
 | control-plane | Control-plane (API, datastore etcd embutido — migrado de SQLite em 2026-11-22; taint `NoSchedule`) | Servidor físico dedicado |
 | worker1 | Worker | Servidor físico dedicado |
-| worker2 | Worker (com GPU GTX 970 via passthrough) | VM no servidor TrueNAS SCALE |
-| worker3 | Worker (com GPU AMD RX 9070; no cluster desde 2026-11-22, ainda sem workloads de GPU) | Desktop físico dedicado |
+| worker2 | Worker (com GPU GTX 970 via passthrough; sem Jellyfin desde 2026-11-22) | VM no servidor TrueNAS SCALE |
+| worker3 | Worker (com GPU AMD RX 9070 via generic-device-plugin `devic.es/amdgpu`; roda o Jellyfin com VA-API desde 2026-11-22) | Desktop físico dedicado |
 
 Antes de propor mudanças de infraestrutura, **sempre leia primeiro** `clusters/worker2/config.md`, `clusters/worker3/config.md`, `clusters/truenas/config.md` e, se a mudança envolver monitoring/logging/storage NFS, `clusters/observability/config.md` — eles contêm o estado real e atualizado de hardware, storage ZFS, configuração da VM e do cluster, incluindo o log de comandos já executados.
 

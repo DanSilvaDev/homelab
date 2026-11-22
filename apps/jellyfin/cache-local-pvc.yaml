@@ -1,0 +1,25 @@
+# Cache de transcodificação/thumbnails do Jellyfin no NVMe local do worker3
+# (local-path-provisioner embutido no k3s, em /var/lib/rancher/k3s/storage no LV
+# raiz de 100 GiB). Substitui o jellyfin-cache-pvc (NFS truenas-nfs-ssd) desde
+# 2026-11-22, quando o Jellyfin migrou do worker2 para o worker3:
+#   - transcode escreve muito e é descartável: no NVMe local não passa pela rede
+#     nem disputa o SSD do TrueNAS com os configs da media stack;
+#   - o PV local-path fica amarrado ao worker3 (nodeAffinity), o que é desejado -
+#     o Jellyfin só roda lá por causa da GPU.
+# Perder este volume não perde nada importante: o Jellyfin refaz o cache.
+#
+# local-path não impõe o tamanho pedido (é só um diretório no host) - os 20Gi são
+# indicativos. O Jellyfin limpa transcodes antigos sozinho; se o / do worker3
+# encher, o kubelet entra em DiskPressure - ver clusters/worker3/config.md (LVM).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jellyfin-cache-local-pvc
+  namespace: media
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi

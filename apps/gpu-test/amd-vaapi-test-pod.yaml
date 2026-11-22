@@ -1,0 +1,34 @@
+# Pod descartável para validar VA-API na RX 9070 (worker3) ANTES de migrar o
+# Jellyfin - usa a mesma imagem e o mesmo usuário do Jellyfin (1000:1000 +
+# grupo render 991), então se o vainfo funciona aqui, funciona lá. De quebra,
+# já deixa a imagem do Jellyfin baixada no worker3.
+#
+# Uso:
+#   kubectl apply -f apps/gpu-test/amd-vaapi-test-pod.yaml
+#   kubectl exec amd-vaapi-test -- /usr/lib/jellyfin-ffmpeg/vainfo --display drm --device /dev/dri/renderD128
+#   kubectl delete -f apps/gpu-test/amd-vaapi-test-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: amd-vaapi-test
+  namespace: default
+spec:
+  restartPolicy: Never
+  nodeSelector:
+    gpu-vendor: amd
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    supplementalGroups: [991]   # grupo `render` do worker3 (dono de renderD128 e kfd)
+  containers:
+    - name: test
+      image: jellyfin/jellyfin:12.4
+      command: ["sleep", "3600"]
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          devic.es/amdgpu: "1"
+          cpu: "1"
+          memory: 512Mi

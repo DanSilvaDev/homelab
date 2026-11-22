@@ -6,7 +6,7 @@
 
 ## Português
 
-**Status**: Ideia — não implementada.
+**Status**: Ideia — não implementada. **Gatilho cumprido em 2026-11-22**: o Jellyfin migrou para o worker3 e o slot de time-slicing da GTX 970 está livre.
 **Componente(s) relacionado(s)**: worker2 (GTX 970 via passthrough), host TrueNAS, `nvidia-device-plugin` (time-slicing), Bazarr, Open WebUI/Ollama.
 **Origem**: sessão de planejamento de 2026-11-19 — com o Jellyfin migrando para o worker3 (ver [worker3_gpu_node.md](worker3_gpu_node.md)), o slot de time-slicing da GTX 970 fica livre; o usuário perguntou o que mais dá pra fazer com ela.
 
@@ -39,7 +39,7 @@ Re-encode em lote da biblioteca (ex: Tdarr) foi descartado para a GTX 970 — fa
 
 ## English
 
-**Status**: Idea — not implemented.
+**Status**: Idea — not implemented. **Trigger met on 2026-11-22**: Jellyfin moved to worker3 and the GTX 970's time-slicing slot is free.
 **Related component(s)**: worker2 (GTX 970 via passthrough), TrueNAS host, `nvidia-device-plugin` (time-slicing), Bazarr, Open WebUI/Ollama.
 **Origin**: planning session on 2026-11-19 — with Jellyfin moving to worker3 (see [worker3_gpu_node.md](worker3_gpu_node.md)), the GTX 970's time-slicing slot frees up; the user asked what else it could be used for.
 
