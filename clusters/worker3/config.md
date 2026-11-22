@@ -1,7 +1,7 @@
 # Worker3 (k3s) - Resumo de Configuração
 
 Host físico: desktop dedicado (bare metal, sem virtualização)
-Status: **No cluster como `agent` desde 2026-11-22** (`v1.36.5+k3s1`, ROLES `worker`). GPU exposta no k8s via generic-device-plugin (`devic.es/amdgpu`) e **Jellyfin rodando aqui com VA-API** desde 2026-11-22 (fase 2 concluída).
+Status: **No cluster como `agent` desde 2026-11-22** (`v1.36.5+k3s1`, ROLES `worker`). GPU exposta no k8s via generic-device-plugin (`devic.es/amdgpu`), **Jellyfin rodando aqui com VA-API** (fase 2) e **streaming de jogos via Wolf/Moonlight** ([gaming/config.md](../gaming/config.md)), ambos desde 2026-11-22.
 
 Papel planejado: nó "GPU de verdade" do cluster — Jellyfin (migra do worker2), streaming de jogos (Wolf/Moonlight) e IA local (Ollama/Open WebUI). Plano completo e decisões: [ideas/worker3_gpu_node.md](../../ideas/worker3_gpu_node.md).
 
@@ -70,7 +70,17 @@ Adiados (medir consumo antes): PCIe ASPM (histórico de instabilidade de NIC no 
 | `nvme0n1p1` | 1 GB | `/boot/efi` |
 | `nvme0n1p2` | 2 GB | `/boot` |
 | `ubuntu-vg/ubuntu-lv` | 100 GiB | `/` — sistema, k3s, imagens de container (crescer online com `lvextend -r` se precisar) |
-| VG livre | ~374 GiB | reservado para um LV separado de Steam + modelos de IA (evita `DiskPressure` no `/`) |
+| `ubuntu-vg/games-lv` | 200 GiB | `/srv/games` (ext4, label `games`) — estado do Wolf, biblioteca da Steam e imagens do dind (2026-11-22). Fora do `/` para a Steam não causar `DiskPressure`. fstab: `defaults,noatime,nofail` (`nofail`: o node sobe mesmo se o LV falhar — liga por WoL, sem monitor) |
+| VG livre | ~174 GiB | reservado (modelos de IA na fase 3; crescer o `games-lv` se precisar) |
+
+### Wolf - exceções no host (convenção 5, 2026-11-22)
+
+Instalado/alterado no host só o que o Wolf exige e não dá para fazer de dentro do pod (estado do Wolf em [gaming/config.md](../gaming/config.md)):
+
+- **LV `games-lv` em `/srv/games`** (tabela acima).
+- **`/etc/modules-load.d/wolf.conf`** com `uinput` e `uhid` — inputs virtuais (controle, teclado, mouse). O `uinput` já vem embutido no kernel; o arquivo não atrapalha.
+- **`/etc/udev/rules.d/85-wolf.rules`** (do repositório do Wolf, ref `stable`, baixado pela API do GitHub) — deixa `/dev/uinput` e `/dev/uhid` como `root:input 660` e marca os devices virtuais do Wolf para o desktop do host não pegá-los (irrelevante aqui, sem desktop).
+- Nenhum pacote instalado.
 
 ## Contexto do cluster k3s
 
@@ -100,6 +110,8 @@ Sem taint no worker3 por enquanto: aceita qualquer workload como um worker comum
 - [x] Migração SQLite → etcd no control-plane (2026-11-22) — ver [control_plane_1/config.md](../control_plane_1/config.md)
 - [x] Confirmar C-states (`cpuidle`: `POLL`, `C1`, `C2`)
 - [x] Fase 2: GPU no k8s (generic-device-plugin, `devic.es/amdgpu`) + Jellyfin migrado do worker2 com VA-API e cache local (2026-11-22) — transcode validado (`h264 -> hevc (hevc_vaapi)`, `scale_vaapi`)
+- [x] Fase 4 (antecipada): Wolf/Moonlight — LV `/srv/games`, `uinput`/`uhid`, regras udev, pod `wolf` + sidecar dind; Steam e Wolf UI funcionando (2026-11-22) — ver [gaming/config.md](../gaming/config.md)
+- [ ] Testar o "Wake PC" do Moonlight
 - [ ] Fase 3: Ollama + Open WebUI — ver [ideas/worker3_gpu_node.md](../../ideas/worker3_gpu_node.md)
 
 ## Log de comandos executados
@@ -176,4 +188,22 @@ kubectl -n media rollout status deploy/jellyfin-deployment --timeout=300s
 # Jellyfin UI: Painel -> Reprodução -> Transcodificação -> VAAPI, /dev/dri/renderD128
 # Validação do transcode pelo log do ffmpeg
 MSYS_NO_PATHCONV=1 kubectl -n media exec deploy/jellyfin-deployment -- sh -c 'f=$(ls -t /config/log/FFmpeg.Transcode-* | head -1); grep -m1 -A6 "Stream mapping" "$f"'
+
+# Wolf - pré-requisitos no host (2026-11-22)
+sudo lvcreate -L 200G -n games-lv ubuntu-vg
+sudo mkfs.ext4 -L games /dev/ubuntu-vg/games-lv
+sudo mkdir -p /srv/games
+echo '/dev/ubuntu-vg/games-lv /srv/games ext4 defaults,noatime,nofail 0 2' | sudo tee -a /etc/fstab
+sudo systemctl daemon-reload
+sudo mount /srv/games
+df -h /srv/games
+printf 'uinput\nuhid\n' | sudo tee /etc/modules-load.d/wolf.conf
+sudo modprobe -a uinput uhid
+lsmod | grep -E '^(uinput|uhid)'
+curl -fsSL "https://api.github.com/repos/games-on-whales/wolf/contents/85-wolf.rules?ref=stable" \
+  | python3 -c 'import sys,json,base64; sys.stdout.write(base64.b64decode(json.load(sys.stdin)["content"]).decode())' \
+  | sudo tee /etc/udev/rules.d/85-wolf.rules
+sudo udevadm control --reload-rules && sudo udevadm trigger
+ls -l /dev/uinput /dev/uhid                                              # crw-rw---- root input
+# Deploy e config.toml do Wolf: ver clusters/gaming/config.md
 ```

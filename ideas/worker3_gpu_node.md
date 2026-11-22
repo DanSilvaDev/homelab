@@ -6,11 +6,11 @@
 
 ## Português
 
-**Status**: Em implementação — fases 0 e 1 concluídas (worker3 no cluster como `agent` desde 2026-11-22; estado atual em [clusters/worker3/config.md](../clusters/worker3/config.md)). Migração SQLite → etcd do control-plane também concluída em 2026-11-22 ([control_plane_1/config.md](../clusters/control_plane_1/config.md)). Fase 2 (GPU no k8s + Jellyfin) concluída em 2026-11-22. Próximo: fase 3 (Ollama).
+**Status**: Em implementação — fases 0 e 1 concluídas (worker3 no cluster como `agent` desde 2026-11-22; estado atual em [clusters/worker3/config.md](../clusters/worker3/config.md)). Migração SQLite → etcd do control-plane também concluída em 2026-11-22 ([control_plane_1/config.md](../clusters/control_plane_1/config.md)). Fase 2 (GPU no k8s + Jellyfin) concluída em 2026-11-22. Fase 4 (Wolf) antecipada e concluída em 2026-11-22 ([clusters/gaming/config.md](../clusters/gaming/config.md)). Próximo: fase 3 (Ollama).
 **Componente(s) relacionado(s)**: worker3 (node novo), Jellyfin, Wolf/Moonlight (streaming de jogos), Ollama/Open WebUI (IA local), worker2 (GTX 970), observabilidade, ciclo de energia.
 **Origem**: sessão de planejamento de 2026-11-19 — o usuário montou uma máquina nova para entrar no cluster como `worker3`.
 
-O `worker3` passa a ser o nó "GPU de verdade" do cluster, com três papéis: **servidor de mídia** (Jellyfin migra do worker2), **streaming de jogos da Steam** via Moonlight (ver [game_streaming_moonlight_sunshine.md](game_streaming_moonlight_sunshine.md)) e **IA local com modelos pequenos**.
+O `worker3` passa a ser o nó "GPU de verdade" do cluster, com três papéis: **servidor de mídia** (Jellyfin migra do worker2), **streaming de jogos da Steam** via Moonlight (implantado — ver [clusters/gaming/config.md](../clusters/gaming/config.md)) e **IA local com modelos pequenos**.
 
 ### Hardware
 
@@ -110,7 +110,7 @@ Importante: **limitar potência economiza sob carga, não em idle** — em idle 
 1. **Worker3 base**: BIOS (energia, WoL, Resizable BAR), Ubuntu Server 26.04 com LVM separado, join como `agent` (binário via `scp`, mesmo bloqueio de ISP já documentado), validar GPU (`vainfo`, `rocminfo`). ✅ 2026-11-22 — GPU validada só no nível do kernel (`renderD128`, `/dev/kfd`, firmware); `vainfo`/`rocminfo` ficam para dentro de um container na fase 2, sem instalar no host (nodes limpos).
 2. **GPU no k8s + migração do Jellyfin** (VA-API, cache de transcode local). ✅ 2026-11-22 — generic-device-plugin (`devic.es/amdgpu`, `count: 3`), Jellyfin no worker3 transcodificando com `hevc_vaapi`; detalhes em [clusters/worker3/config.md](../clusters/worker3/config.md).
 3. **Ollama + Open WebUI** (modelos no volume local, `keep_alive` curto).
-4. **Wolf** (streaming de jogos) + Moonlight "Wake PC".
+4. **Wolf** (streaming de jogos) + Moonlight "Wake PC". ✅ 2026-11-22 (feita antes da fase 3) — Wolf no k3s com sidecar `docker:dind`, estado em LV `/srv/games` de 200 GiB; Steam e Wolf UI funcionando. "Wake PC" ainda não testado. Detalhes em [clusters/gaming/config.md](../clusters/gaming/config.md).
 5. **Observabilidade de energia** (RAPL/hwmon no Grafana, tomada com medição opcional).
 6. **Raspberry Pi 3 como utilitário 24/7** (Ansible + WoL + monitoramento externo + NUT).
 
@@ -128,11 +128,11 @@ HA do control-plane fica fora deste plano — ver [multi_control_plane_ha.md](mu
 
 ## English
 
-**Status**: In progress — phases 0 and 1 done (worker3 in the cluster as an `agent` since 2026-11-22; current state in [clusters/worker3/config.md](../clusters/worker3/config.md)). The control-plane SQLite → etcd migration was also completed on 2026-11-22 ([control_plane_1/config.md](../clusters/control_plane_1/config.md)). Phase 2 (GPU in k8s + Jellyfin) done on 2026-11-22. Next: phase 3 (Ollama).
+**Status**: In progress — phases 0 and 1 done (worker3 in the cluster as an `agent` since 2026-11-22; current state in [clusters/worker3/config.md](../clusters/worker3/config.md)). The control-plane SQLite → etcd migration was also completed on 2026-11-22 ([control_plane_1/config.md](../clusters/control_plane_1/config.md)). Phase 2 (GPU in k8s + Jellyfin) done on 2026-11-22. Phase 4 (Wolf) brought forward and done on 2026-11-22 ([clusters/gaming/config.md](../clusters/gaming/config.md)). Next: phase 3 (Ollama).
 **Related component(s)**: worker3 (new node), Jellyfin, Wolf/Moonlight (game streaming), Ollama/Open WebUI (local AI), worker2 (GTX 970), observability, power cycle.
 **Origin**: planning session on 2026-11-19 — the user built a new machine to join the cluster as `worker3`.
 
-`worker3` becomes the cluster's "real GPU" node, with three roles: **media server** (Jellyfin moves from worker2), **Steam game streaming** via Moonlight (see [game_streaming_moonlight_sunshine.md](game_streaming_moonlight_sunshine.md)) and **local AI with small models**.
+`worker3` becomes the cluster's "real GPU" node, with three roles: **media server** (Jellyfin moves from worker2), **Steam game streaming** via Moonlight (deployed — see [clusters/gaming/config.md](../clusters/gaming/config.md)) and **local AI with small models**.
 
 ### Hardware
 
@@ -232,7 +232,7 @@ Important: **power limits save energy under load, not at idle** — at idle the 
 1. **Worker3 base**: BIOS (power, WoL, Resizable BAR), Ubuntu Server 26.04 with split LVM, join as `agent` (binary via `scp`, same ISP block already documented), validate GPU (`vainfo`, `rocminfo`). ✅ 2026-11-22 — GPU validated at kernel level only (`renderD128`, `/dev/kfd`, firmware); `vainfo`/`rocminfo` move into a container in phase 2, not installed on the host (clean nodes).
 2. **GPU in k8s + Jellyfin migration** (VA-API, local transcode cache). ✅ 2026-11-22 — generic-device-plugin (`devic.es/amdgpu`, `count: 3`), Jellyfin on worker3 transcoding with `hevc_vaapi`; details in [clusters/worker3/config.md](../clusters/worker3/config.md).
 3. **Ollama + Open WebUI** (models on the local volume, short `keep_alive`).
-4. **Wolf** (game streaming) + Moonlight "Wake PC".
+4. **Wolf** (game streaming) + Moonlight "Wake PC". ✅ 2026-11-22 (done before phase 3) — Wolf on k3s with a `docker:dind` sidecar, state on a 200 GiB `/srv/games` LV; Steam and Wolf UI working. "Wake PC" not tested yet. Details in [clusters/gaming/config.md](../clusters/gaming/config.md).
 5. **Power observability** (RAPL/hwmon in Grafana, optional metering plug).
 6. **Raspberry Pi 3 as a 24/7 utility** (Ansible + WoL + external monitoring + NUT).
 

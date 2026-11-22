@@ -1,0 +1,210 @@
+# Wolf (Games on Whales) - servidor compatível com Moonlight para streaming de jogos
+# a partir do worker3 (RX 9070). Ver ideas/game_streaming_moonlight_sunshine.md e
+# clusters/worker3/config.md.
+#
+# Arquitetura (opção A, decidida em 2026-11-22): o Wolf não roda o jogo dentro do
+# próprio container - a cada sessão ele CRIA containers novos (Steam, PulseAudio)
+# via API do Docker. O k3s usa containerd e o host não tem Docker, então o pod
+# leva um sidecar `docker:dind` que fornece essa API. Não há suporte upstream a
+# Kubernetes nativo (wolf#82; o operator "fenrir" se declara "NOT IN A USEABLE
+# STATE"). Plano B, se isto não funcionar: Podman socket no host (caminho
+# documentado pelo Wolf, mas quebra a convenção de nodes limpos).
+#
+# Regra que faz o dind funcionar: o Wolf manda o Docker montar caminhos "do host"
+# nos containers dos apps (/etc/wolf, /tmp/sockets, /dev, /run/udev). Como quem
+# resolve esses caminhos é o dind, os DOIS containers precisam enxergar os mesmos
+# diretórios nos MESMOS caminhos - por isso todos os volumes abaixo são montados
+# igualmente no wolf e no dind.
+#
+# Pré-requisitos no host (worker3, 2026-11-22): LV games-lv em /srv/games,
+# módulos uinput/uhid (/etc/modules-load.d/wolf.conf) e /etc/udev/rules.d/85-wolf.rules.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wolf
+  namespace: gaming
+spec:
+  replicas: 1
+  # Recreate: um único Wolf por node (portas fixas no host, uinput, estado em /etc/wolf).
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: wolf
+  template:
+    metadata:
+      labels:
+        app: wolf
+    spec:
+      nodeSelector:
+        gpu-vendor: amd
+      # hostNetwork: o protocolo do Moonlight usa 6 portas fixas TCP+UDP (47984,
+      # 47989, 48010 TCP; 47999, 48100, 48200 UDP) - no Moonlight, adicionar o host
+      # pelo IP do worker3 (192.168.3.106). Mais simples que um LoadBalancer do
+      # Kube-VIP com protocolos mistos, já que o Wolf só roda neste node.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      terminationGracePeriodSeconds: 30
+      # dind como "native sidecar" (initContainer com restartPolicy: Always): sobe
+      # ANTES do wolf e só libera o wolf quando o startupProbe confirma que o socket
+      # responde - sem isso o Wolf iniciava ~20 s antes do dockerd e logava
+      # "[DOCKER] Unable to retrieve docker API version". Continua rodando junto com
+      # o wolf durante toda a vida do pod.
+      initContainers:
+        - name: dind
+          image: docker:29.9.3-dind
+          restartPolicy: Always
+          # command: chama o wrapper `dind` + `dockerd` direto, PULANDO o
+          # dockerd-entrypoint.sh da imagem. Motivo (2026-11-22): com
+          # DOCKER_TLS_CERTDIR vazio, o entrypoint ignorava o --host e ainda abria
+          # `tcp://0.0.0.0:2375` SEM TLS - com hostNetwork, isso expunha uma API Docker
+          # (equivalente a root no worker3) para a LAN inteira.
+          # Só socket unix. --bridge=none/--iptables=false: o pod está na rede do
+          # host, então um dockerd com bridge/iptables mexeria nas regras do próprio
+          # worker3 (e no flannel/kube-proxy). Consequência: containers dos apps não
+          # têm rede própria - a config do Wolf usa "NetworkMode": "host" no
+          # base_create_json dos apps que precisam de rede (ex: Steam).
+          command: ["dind", "dockerd"]
+          args:
+            - --host=unix:///var/run/dind/docker.sock
+            - --bridge=none
+            - --iptables=false
+            - --ip6tables=false
+          startupProbe:
+            exec:
+              command: ["docker", "-H", "unix:///var/run/dind/docker.sock", "version"]
+            periodSeconds: 2
+            failureThreshold: 60
+          securityContext:
+            privileged: true
+          # Sem limit de CPU/memória de propósito: os jogos rodam DENTRO deste
+          # container (filhos do dockerd), então um limit aqui seria o limite do jogo.
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          volumeMounts:
+            # /tmp PRECISA ser um mountpoint no dind: o wrapper `dind` (moby
+            # hack/dind) faz `mount -t tmpfs none /tmp` quando /tmp não é
+            # mountpoint, e esse tmpfs ESCONDE o /tmp/sockets montado abaixo. Sem
+            # este volume (2026-11-22), o dockerd via um /tmp vazio, criava
+            # diretórios vazios no lugar do socket Wayland (`wayland-1`) e do
+            # pulse-socket, e os apps (Steam/sway, Wolf UI) morriam em <1 s sem
+            # tela.
+            - name: dind-tmp
+              mountPath: /tmp
+            - name: wolf-state
+              mountPath: /etc/wolf
+            - name: sockets
+              mountPath: /tmp/sockets
+            - name: dind-sock
+              mountPath: /var/run/dind
+            - name: dev
+              mountPath: /dev
+            - name: shm
+              mountPath: /dev/shm
+            - name: run-udev
+              mountPath: /run/udev
+            - name: dind-data
+              mountPath: /var/lib/docker
+      containers:
+        - name: wolf
+          # Wolf não publica tags de versão de imagem (só `stable`, `beta` e tags de
+          # branch/commit) - fixado pelo digest do `stable` em 2026-11-22.
+          image: ghcr.io/games-on-whales/wolf:stable@sha256:47ce7a0b67ee6645d2c6fefd8fdda7fee49a00e327c39597a04e84a0cd052910
+          env:
+            - name: TZ
+              value: "America/Sao_Paulo"
+            - name: WOLF_DOCKER_SOCKET
+              value: /var/run/dind/docker.sock
+            - name: WOLF_RENDER_NODE
+              value: /dev/dri/renderD128
+            - name: XDG_RUNTIME_DIR
+              value: /tmp/sockets
+            - name: HOST_APPS_STATE_FOLDER
+              value: /etc/wolf
+            - name: WOLF_STOP_CONTAINER_ON_EXIT
+              value: "TRUE"
+          # Se o Wolf sobe com alguma porta ocupada (ex: 48010 ainda presa pelo pod
+          # anterior - com hostNetwork as portas são do node), ele NÃO morre: loga
+          # "Unable to create RTSP server on port: 48010 ... Address already in use"
+          # e segue sem RTSP, e o Moonlight falha com "erro 111 / RTSP handshake"
+          # (2026-11-22). O livenessProbe reinicia o container nesse caso.
+          # exec em vez de tcpSocket: a conexão TCP do probe na porta RTSP fazia o
+          # Wolf logar "[RTSP] error during transmission: End of file" a cada
+          # execução. Aqui só se confere, sem conectar, se existe um socket em
+          # LISTEN (estado 0A) na porta 48010 (= 0xBB8A) - com hostNetwork o
+          # /proc/net/tcp* é o do node.
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - grep -qE ':BB8A [0-9A-F]+:0000 0A' /proc/net/tcp /proc/net/tcp6
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            failureThreshold: 3
+          # privileged: cria devices virtuais via /dev/uinput e /dev/uhid que
+          # aparecem depois do start (por isso o /dev do host montado, não só
+          # devices fixos) e precisa da GPU para o encode.
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              # 1 dos 3 slots do generic-device-plugin (Jellyfin, Wolf, Ollama) - o
+              # acesso real à GPU vem do privileged + /dev; o pedido é para o
+              # scheduler contabilizar o compartilhamento da placa.
+              devic.es/amdgpu: "1"
+          volumeMounts:
+            - name: wolf-state
+              mountPath: /etc/wolf
+            - name: sockets
+              mountPath: /tmp/sockets
+            - name: dind-sock
+              mountPath: /var/run/dind
+            - name: dev
+              mountPath: /dev
+            - name: shm
+              mountPath: /dev/shm
+            - name: run-udev
+              mountPath: /run/udev
+      volumes:
+        # Estado do Wolf (config.toml, pareamentos) e dos apps (home da Steam,
+        # biblioteca de jogos) - no LV dedicado, fora do / do worker3.
+        - name: wolf-state
+          hostPath:
+            path: /srv/games/wolf
+            type: DirectoryOrCreate
+        # Imagens e camadas dos containers dos apps (Steam etc.) baixadas pelo dind.
+        - name: dind-data
+          hostPath:
+            path: /srv/games/docker
+            type: DirectoryOrCreate
+        # Socket Wayland/PulseAudio criados pelo Wolf e montados nos apps.
+        - name: sockets
+          emptyDir: {}
+        - name: dind-sock
+          emptyDir: {}
+        # /tmp do dind - ver comentário no volumeMount (evita o tmpfs do `dind`).
+        - name: dind-tmp
+          emptyDir: {}
+        - name: dev
+          hostPath:
+            path: /dev
+        # /dev/shm maior que os 64 MB padrão do pod. Os apps usam "IpcMode": "host",
+        # que dentro do dind significa o /dev/shm do PRÓPRIO pod - com 64 MB o
+        # Chromium da Steam (steamwebhelper) esgotava o shm (97% usado,
+        # "AllocateRingBuffer() failed") e reiniciava a cada 10 s: "steamwebhelper
+        # is not responding" (2026-11-22). Montado no wolf e no dind (mesma regra
+        # de caminhos iguais). Memory-backed: conta como RAM do pod só no que for
+        # usado; 2Gi é o teto (subir se algum jogo/Proton precisar).
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
+        - name: run-udev
+          hostPath:
+            path: /run/udev

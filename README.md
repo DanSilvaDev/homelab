@@ -27,6 +27,7 @@ apps/                      Manifestos de aplicações rodando no cluster
   core-dns/                  CoreDNS - fallback de DNS que assume o IP do Pi-hole via Kube-VIP quando ele fica indisponível (ver "Gerenciamento de energia" abaixo)
   ntfy/                      ntfy self-hosted (push notifications) - deployment, service, PVC
   grafana/alerts/            Export versionado de regras de alerta nativas do Grafana (backup, não aplicado automaticamente)
+  wolf/                      Wolf (Games on Whales) - streaming de jogos via Moonlight no worker3, com sidecar docker:dind
   helpers/                   Templates de pods temporários reutilizáveis (ex: migração de dados entre storage)
     gpu-test/                Pods de teste para validar alocação de GPU (benchmark CUDA na GTX 970, VA-API na RX 9070)
 
@@ -35,6 +36,7 @@ clusters/                  Configuração e estado dos nós do cluster
   kube-vip/                  Manifestos do Kube-VIP (HA do control-plane + LoadBalancer L2/ARP)
   observability/config.md    Estado da stack de monitoring/logging: Prometheus, Grafana, Alertmanager, storage NFS
   media-stack/config.md      Stack de mídia (Jellyfin + *arr) - implantada; pontos em aberto rastreados em known-issues.md
+  gaming/config.md           Streaming de jogos (Wolf/Moonlight) no worker3 - arquitetura do pod, config.toml, riscos
   truenas/config.md          Estado completo do host TrueNAS: hardware, BIOS, pools e datasets ZFS
   worker2/config.md          Estado completo da VM worker2: hardware, SO, driver GPU, histórico de comandos
   worker3/config.md          Estado completo do worker3 (desktop com RX 9070): hardware, BIOS, SO, GPU, histórico de comandos
@@ -110,6 +112,7 @@ apps/                      Application manifests running on the cluster
   core-dns/                  CoreDNS - DNS fallback that takes over Pi-hole's Kube-VIP IP when it's unavailable (see "Power management" below)
   ntfy/                      Self-hosted ntfy (push notifications) - deployment, service, PVC
   grafana/alerts/            Versioned export of native Grafana alert rules (backup, not auto-applied)
+  wolf/                      Wolf (Games on Whales) - game streaming via Moonlight on worker3, with a docker:dind sidecar
   helpers/                   Reusable temporary pod templates (e.g. data migration between storage backends)
     gpu-test/                Test pods to validate GPU allocation (CUDA benchmark on the GTX 970, VA-API on the RX 9070)
 
@@ -118,6 +121,7 @@ clusters/                  Configuration and state of the cluster nodes
   kube-vip/                  Kube-VIP manifests (control-plane HA + L2/ARP LoadBalancer)
   observability/config.md    State of the monitoring/logging stack: Prometheus, Grafana, Alertmanager, NFS storage
   media-stack/config.md      Media stack (Jellyfin + *arr) - deployed; open items tracked in known-issues.md
+  gaming/config.md           Game streaming (Wolf/Moonlight) on worker3 - pod architecture, config.toml, risks
   truenas/config.md          Full state of the TrueNAS host: hardware, BIOS, ZFS pools and datasets
   worker2/config.md          Full state of the worker2 VM: hardware, OS, GPU driver, command history
   worker3/config.md          Full state of worker3 (RX 9070 desktop): hardware, BIOS, OS, GPU, command history
