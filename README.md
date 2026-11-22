@@ -26,9 +26,9 @@ apps/                      Manifestos de aplicações rodando no cluster
   pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, config
   core-dns/                  CoreDNS - fallback de DNS que assume o IP do Pi-hole via Kube-VIP quando ele fica indisponível (ver "Gerenciamento de energia" abaixo)
   ntfy/                      ntfy self-hosted (push notifications) - deployment, service, PVC
-  gpu-test/                  Pods de teste para validar alocação de GPU (benchmark CUDA na GTX 970, VA-API na RX 9070)
   grafana/alerts/            Export versionado de regras de alerta nativas do Grafana (backup, não aplicado automaticamente)
   helpers/                   Templates de pods temporários reutilizáveis (ex: migração de dados entre storage)
+    gpu-test/                Pods de teste para validar alocação de GPU (benchmark CUDA na GTX 970, VA-API na RX 9070)
 
 clusters/                  Configuração e estado dos nós do cluster
   control_plane_1/           Reservado para manifestos/config do nó control-plane
@@ -109,9 +109,9 @@ apps/                      Application manifests running on the cluster
   pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, config
   core-dns/                  CoreDNS - DNS fallback that takes over Pi-hole's Kube-VIP IP when it's unavailable (see "Power management" below)
   ntfy/                      Self-hosted ntfy (push notifications) - deployment, service, PVC
-  gpu-test/                  Test pods to validate GPU allocation (CUDA benchmark on the GTX 970, VA-API on the RX 9070)
   grafana/alerts/            Versioned export of native Grafana alert rules (backup, not auto-applied)
   helpers/                   Reusable temporary pod templates (e.g. data migration between storage backends)
+    gpu-test/                Test pods to validate GPU allocation (CUDA benchmark on the GTX 970, VA-API on the RX 9070)
 
 clusters/                  Configuration and state of the cluster nodes
   control_plane_1/           Reserved for control-plane node manifests/config

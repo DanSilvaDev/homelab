@@ -4,9 +4,9 @@
 # já deixa a imagem do Jellyfin baixada no worker3.
 #
 # Uso:
-#   kubectl apply -f apps/gpu-test/amd-vaapi-test-pod.yaml
+#   kubectl apply -f apps/helpers/gpu-test/amd-vaapi-test-pod.yaml
 #   kubectl exec amd-vaapi-test -- /usr/lib/jellyfin-ffmpeg/vainfo --display drm --device /dev/dri/renderD128
-#   kubectl delete -f apps/gpu-test/amd-vaapi-test-pod.yaml
+#   kubectl delete -f apps/helpers/gpu-test/amd-vaapi-test-pod.yaml
 apiVersion: v1
 kind: Pod
 metadata:

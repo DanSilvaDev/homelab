@@ -57,7 +57,7 @@ Adiados (medir consumo antes): PCIe ASPM (histórico de instabilidade de NIC no 
   - O domínio default do plugin mudou de `squat.ai` (ainda citado no README do projeto) para `devic.es` — fixado com `--domain devic.es` para um bump de imagem não renomear o recurso
   - Escolhido em vez do plugin oficial da AMD (`amd.com/gpu`, 1 GPU = 1 pod) e de pod `privileged` com hostPath
 - Pods que não rodam como root precisam de `securityContext.supplementalGroups: [991]`
-- Validação VA-API ([`apps/gpu-test/amd-vaapi-test-pod.yaml`](../../apps/gpu-test/amd-vaapi-test-pod.yaml), mesma imagem/usuário do Jellyfin): `Mesa Gallium driver 26.0.8 for AMD Radeon RX 9070 (radeonsi, gfx1201)` — vem dentro da imagem (`jellyfin-ffmpeg`), nada instalado no host
+- Validação VA-API ([`apps/helpers/gpu-test/amd-vaapi-test-pod.yaml`](../../apps/helpers/gpu-test/amd-vaapi-test-pod.yaml), mesma imagem/usuário do Jellyfin): `Mesa Gallium driver 26.0.8 for AMD Radeon RX 9070 (radeonsi, gfx1201)` — vem dentro da imagem (`jellyfin-ffmpeg`), nada instalado no host
   - Decode: H.264, HEVC 8/10-bit, VP9 8/10-bit, AV1 8/10-bit, JPEG
   - Encode: H.264, HEVC 8/10-bit, AV1 8-bit
 - **Monitorar uso de vídeo**: `gpu_busy_percent` mede só o bloco 3D (GFX) e fica ~0 durante transcode. O uso do VCN aparece por processo no fdinfo do `amdgpu`: `sudo grep -hE 'drm-engine|drm-memory-vram' /proc/<pid-do-ffmpeg>/fdinfo/*` (contadores `drm-engine-enc`/`dec` em ns crescendo). Painel de verdade fica para a fase 5 (observabilidade de energia)

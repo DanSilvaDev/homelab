@@ -85,7 +85,7 @@ spec:
             # (infrastructure/amd-gpu/generic-device-plugin.yaml): injeta
             # /dev/dri/renderD128 (VA-API) e /dev/kfd. O Mesa/radeonsi vem dentro da
             # própria imagem (jellyfin-ffmpeg) - validado em 2026-11-22 com
-            # apps/gpu-test/amd-vaapi-test-pod.yaml: Mesa 26.0.8, gfx1201, encode
+            # apps/helpers/gpu-test/amd-vaapi-test-pod.yaml: Mesa 26.0.8, gfx1201, encode
             # H.264/HEVC/HEVC 10-bit/AV1 e decode H.264/HEVC/VP9/AV1.
             limits:
               devic.es/amdgpu: "1"
