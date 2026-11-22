@@ -6,7 +6,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md) | [Worker2 - config.md]
 
 ## Escopo confirmado
 
-- **Jellyfin** — servidor de mídia, transcodificação via GPU (GTX 970/worker2).
+- **Jellyfin** — servidor de mídia, transcodificação via GPU: **VA-API na RX 9070 do worker3** desde 2026-11-22 (antes NVENC na GTX 970/worker2 — ver [Worker3 - config.md](../worker3/config.md), seção "GPU no Kubernetes").
 - **Prowlarr** — gerenciador de indexers (alimenta Sonarr/Radarr/Lidarr/Readarr).
 - **Sonarr** (séries), **Radarr** (filmes), **Lidarr** (música), **LazyLibrarian** (livros/audiobooks — substitui o Readarr, descontinuado; ver "Decisões já tomadas").
 - **Bazarr** — legendas (integra com Sonarr/Radarr).
@@ -55,7 +55,7 @@ Motivo: precisamos de um caminho previsível e compartilhado entre vários apps 
 | App | Tamanho sugerido | StorageClass recomendada |
 |---|---|---|
 | Jellyfin (config) | 5Gi | `truenas-nfs-ssd` |
-| Jellyfin (cache) | 10Gi | `truenas-nfs-ssd` — descoberto durante a implantação (Fase 3): Jellyfin exige `/cache` como volume separado de `/config`, não estava no plano original |
+| Jellyfin (cache) | 20Gi | **`local-path` no NVMe do worker3** (`jellyfin-cache-local-pvc`) desde 2026-11-22 — antes `jellyfin-cache-pvc` 10Gi em `truenas-nfs-ssd`. Jellyfin exige `/cache` separado de `/config` (descoberto na Fase 3 da implantação); cache é descartável, então ficar preso ao node e fora do NFS é vantagem (transcode não passa pela rede) |
 | Prowlarr | ~1Gi | `truenas-nfs-ssd` |
 | Sonarr | ~1Gi | `truenas-nfs-ssd` |
 | Radarr | ~1Gi | `truenas-nfs-ssd` |

@@ -1,0 +1,85 @@
+# generic-device-plugin (squat/generic-device-plugin) - expõe a GPU AMD do worker3
+# (RX 9070) como recurso estendido `devic.es/amdgpu` para os pods.
+#
+# Por que este plugin e não o oficial da AMD (rocm/k8s-device-plugin): o oficial
+# expõe `amd.com/gpu` por contagem de GPUs físicas - 1 GPU = 1 pod. Aqui a mesma
+# placa precisa ser compartilhada entre Jellyfin (VCN), Ollama (fase 3) e Wolf
+# (fase 4). O `count: 3` deixa até 3 pods alocarem o mesmo grupo de devices ao
+# mesmo tempo - mesmo modelo mental do time-slicing da NVIDIA no worker2
+# (infrastructure/nvidia-device-plugin/values.yaml), mas sem isolamento nenhum:
+# a convivência (jogo x LLM disputando VRAM) é regra operacional, ver
+# ideas/worker3_gpu_node.md ("GPU compartilhada: regra de convivência").
+#
+# O grupo aloca juntos:
+#   /dev/dri/renderD128 - VA-API (Jellyfin) / Vulkan / Mesa
+#   /dev/kfd            - ROCm (Ollama)
+# Os dois são root:render 660 no host, com GID 991 no worker3 - pods que não rodam
+# como root precisam de `securityContext.supplementalGroups: [991]`.
+#
+# GPU AMD não precisa de runtime customizado no containerd (diferente da NVIDIA):
+# o plugin só injeta os device files no container e libera no cgroup.
+#
+# Restrito ao worker3 pelo label `gpu-vendor=amd` - NÃO usar `gpu=true` (é o
+# nodeSelector do nvidia-device-plugin e do dcgm-exporter, ver worker2).
+#
+# Imagem fixada pela tag de commit (o projeto não publica tags de versão):
+# f7c3291 = `latest` em 2026-10-26.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: generic-device-plugin
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: generic-device-plugin
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: generic-device-plugin
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: generic-device-plugin
+    spec:
+      priorityClassName: system-node-critical
+      nodeSelector:
+        gpu-vendor: amd
+      containers:
+        - name: generic-device-plugin
+          image: squat/generic-device-plugin:f7c3291
+          args:
+            # Domínio explícito: o default do plugin mudou de `squat.ai` para
+            # `devic.es` em versões recentes (descoberto em 2026-11-22 - o recurso
+            # apareceu como devic.es/amdgpu, não squat.ai/amdgpu como no README).
+            # Fixar evita que um bump de imagem renomeie o recurso e deixe os pods
+            # que o pedem presos em Pending.
+            - --domain
+            - devic.es
+            - --device
+            - '{"name": "amdgpu", "groups": [{"count": 3, "paths": [{"path": "/dev/dri/renderD128"}, {"path": "/dev/kfd"}]}]}'
+          resources:
+            requests:
+              cpu: 50m
+              memory: 10Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
+          ports:
+            - containerPort: 8080
+              name: http
+          # Precisa enxergar o /dev do host e registrar o socket no kubelet.
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: device-plugin
+              mountPath: /var/lib/kubelet/device-plugins
+            - name: dev
+              mountPath: /dev
+      volumes:
+        - name: device-plugin
+          hostPath:
+            path: /var/lib/kubelet/device-plugins
+        - name: dev
+          hostPath:
+            path: /dev
+  updateStrategy:
+    type: RollingUpdate

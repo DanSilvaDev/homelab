@@ -18,9 +18,14 @@ spec:
       labels:
         app: jellyfin
     spec:
-      # Só roda no worker2 - único node com GPU (ver clusters/worker2/config.md).
+      # Só roda no worker3 (RX 9070, VA-API) desde 2026-11-22 - antes rodava no
+      # worker2 (GTX 970, NVENC, nodeSelector gpu: "true"). O pedido de
+      # devic.es/amdgpu já restringe o scheduler aos nodes com o plugin, e o PVC
+      # de cache local-path fixa o pod no worker3 de qualquer forma - o
+      # nodeSelector fica explícito pra deixar a intenção clara e a falha legível.
+      # Ver clusters/worker3/config.md.
       nodeSelector:
-        gpu: "true"
+        gpu-vendor: amd
       # 1000:1000 - mesma convenção dos demais apps da media stack (ver
       # clusters/media-stack/config.md, "PUID/PGID"). Antes rodava como root
       # (imagem oficial jellyfin/jellyfin não usa PUID/PGID, só respeita o UID
@@ -33,6 +38,9 @@ spec:
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
+        # 991 = grupo `render` do worker3, dono de /dev/dri/renderD128 e /dev/kfd
+        # (modo 660). Sem ele o processo 1000:1000 não abre a GPU (VA-API falha).
+        supplementalGroups: [991]
       containers:
         - name: jellyfin
           image: jellyfin/jellyfin:12.4
@@ -73,14 +81,14 @@ spec:
             failureThreshold: 3
             successThreshold: 1
           resources:
-            # nvidia.com/gpu: "1" - um dos 2 slots liberados pelo time-slicing (ver
-            # infrastructure/nvidia-device-plugin/values.yaml); o outro fica com o
-            # dcgm-exporter. NVENC/NVDEC fica disponível automaticamente via o runtime
-            # nvidia do containerd (já configurado como default no worker2) - sem
-            # precisar de runtimeClassName nem mount manual de /dev, mesmo padrão já
-            # validado no pod de teste CUDA (ver worker2/config.md, "Validação final").
+            # devic.es/amdgpu: "1" - um dos 3 slots do generic-device-plugin no worker3
+            # (infrastructure/amd-gpu/generic-device-plugin.yaml): injeta
+            # /dev/dri/renderD128 (VA-API) e /dev/kfd. O Mesa/radeonsi vem dentro da
+            # própria imagem (jellyfin-ffmpeg) - validado em 2026-11-22 com
+            # apps/gpu-test/amd-vaapi-test-pod.yaml: Mesa 26.0.8, gfx1201, encode
+            # H.264/HEVC/HEVC 10-bit/AV1 e decode H.264/HEVC/VP9/AV1.
             limits:
-              nvidia.com/gpu: "1"
+              devic.es/amdgpu: "1"
               cpu: "2"
               memory: 4Gi
             requests:
@@ -92,7 +100,9 @@ spec:
             claimName: jellyfin-pvc
         - name: cache
           persistentVolumeClaim:
-            claimName: jellyfin-cache-pvc
+            # local-path no NVMe do worker3 (antes jellyfin-cache-pvc no NFS
+            # truenas-nfs-ssd) - ver cache-local-pvc.yaml.
+            claimName: jellyfin-cache-local-pvc
         - name: media
           persistentVolumeClaim:
             claimName: media-pvc

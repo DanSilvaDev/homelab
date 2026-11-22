@@ -3,7 +3,7 @@
 # como StorageClass dinâmica para PVCs que não exigem I/O de SSD (dados maiores, menos sensíveis a latência).
 #
 # Hosts autorizados no export NFS (TrueNAS): 192.168.3.100 (control-plane),
-# 192.168.3.102 (worker1), 192.168.3.105 (worker2). Quota do dataset: 100GiB.
+# 192.168.3.102 (worker1), 192.168.3.105 (worker2), 192.168.3.106 (worker3). Quota do dataset: 100GiB.
 # O .100 é o IP real da interface física do control-plane (reserva DHCP fixa
 # no roteador pelo MAC) - não confundir com 192.168.3.101, que é só o IP
 # virtual do Kube-VIP pra API (clusters/kube-vip/arp.yaml), nunca usado como
@@ -41,8 +41,10 @@ affinity:
             - key: node-role.kubernetes.io/control-plane
               operator: Exists
 
-# Necessário pra driblar o taint padrão que impede pods comuns de rodarem no
-# control-plane (mesmo padrão do coredns-bypass).
+# Necessário pro taint `node-role.kubernetes.io/control-plane:NoSchedule` que impede
+# pods comuns de rodarem no control-plane (mesmo padrão do coredns-bypass). O k3s NÃO
+# aplica esse taint por padrão (diferente do kubeadm) - ele só passou a existir em
+# 2026-11-22, aplicado manualmente; antes disso esta toleration era inócua.
 tolerations:
   - key: node-role.kubernetes.io/control-plane
     operator: Exists

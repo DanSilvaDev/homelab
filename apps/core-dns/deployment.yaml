@@ -25,7 +25,8 @@ spec:
               - key: node-role.kubernetes.io/control-plane
                 operator: Exists
 
-      # Permite o Pod ignorar a restrição padrão que impede Pods comuns de rodarem no Control Plane
+      # Tolera o taint NoSchedule do control-plane (aplicado em 2026-11-22 - o k3s não
+      # aplica esse taint por padrão, então antes disso esta toleration era inócua)
       tolerations:
       - key: "node-role.kubernetes.io/control-plane"
         operator: "Exists"

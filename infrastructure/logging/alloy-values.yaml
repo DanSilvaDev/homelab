@@ -1,5 +1,5 @@
 # Grafana Alloy (grafana/alloy) - coletor de logs, roda como DaemonSet (controller.type
-# default) em todos os nodes do cluster (control-plane, worker1, worker2).
+# default) em todos os nodes do cluster (control-plane, worker1, worker2, worker3).
 # Descobre pods via API do Kubernetes (loki.source.kubernetes) e envia pro Loki.
 
 alloy:
@@ -65,3 +65,13 @@ alloy:
     limits:
       cpu: 200m
       memory: 256Mi
+
+# Toleration pro taint NoSchedule do control-plane (aplicado em 2026-11-22 - o k3s
+# não aplica taint no server por padrão). Sem ela, o pod do Alloy no control-plane
+# não seria recriado após um upgrade/delete, e os logs desse node sumiriam do Loki.
+# Mesmo padrão dos NFS provisioners e do coredns-bypass.
+controller:
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule

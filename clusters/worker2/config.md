@@ -37,7 +37,7 @@ Ver também: [TrueNAS - config.md](../truenas/config.md)
 | Nome | Compressão | Observação |
 |---|---|---|
 | `midias` | off / lz4 | Biblioteca da media stack (Jellyfin + \*arr) — ver [TrueNAS - config.md](../truenas/config.md) |
-| `Backups` | ZSTD | Split futuro planejado em sub-datasets por fonte (ex. `smb-pc`, `nfs-k3s`) — ver [ideias futuras](../../ideas.md) |
+| `backups` | ZSTD | Split futuro planejado em sub-datasets por fonte (ex. `smb-pc`, `nfs-k3s`) — ver [ideias futuras](../../ideas.md) |
 
 ## VM worker2
 
@@ -134,6 +134,8 @@ O chart Helm `nvdp/nvidia-device-plugin` exige, além do `nodeSelector` customiz
 - `nvidia.com/gpu.present=true` ← label escolhido manualmente (mais simples sem precisar instalar NFD/GPU Operator)
 
 ### NVIDIA device plugin — time-slicing (2026-11-02)
+
+> **2026-11-22**: o Jellyfin migrou para o worker3 (VA-API na RX 9070) — o slot de time-slicing que ele usava está **livre** (`nvidia.com/gpu` alocado 1/2, só o `dcgm-exporter`). Usos futuros da GTX 970: [ideas/gtx970_reuse_after_jellyfin_migration.md](../../ideas/gtx970_reuse_after_jellyfin_migration.md).
 Habilitado `sharing.timeSlicing` com `replicas: 2` — sem isso, `nvidia.com/gpu: 1/1` já ficava 100% alocado só pelo `dcgm-exporter` (que usa só uma fração mínima da GPU de verdade, leitura de métricas via NVML/DCGM), e o modelo de device plugin do Kubernetes é tudo-ou-nada (sem "acesso de leitura parcial"). Agora o node anuncia **2 slots alocáveis** na mesma GPU física (confirmado via `kubectl describe node worker2 | grep -i "nvidia.com/gpu"` → `Capacity`/`Allocatable` = 2), liberando 1 slot pro Jellyfin sem mexer na config do `dcgm-exporter`. Values: `infrastructure/nvidia-device-plugin/values.yaml`. Aplicado via:
 ```bash
 helm repo add nvdp https://nvidia.github.io/k8s-device-plugin

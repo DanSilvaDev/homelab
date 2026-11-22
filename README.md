@@ -14,9 +14,10 @@ Guarda os manifestos, configurações de infraestrutura e a documentação de es
 
 | Nó | Papel | Onde roda |
 |---|---|---|
-| control-plane | Control-plane (API, etcd), com HA via Kube-VIP | Servidor físico dedicado |
+| control-plane | Control-plane (API, datastore etcd embutido), com IP virtual via Kube-VIP | Servidor físico dedicado |
 | worker1 | Worker | Servidor físico dedicado |
 | worker2 | Worker com GPU (NVIDIA GTX 970) | VM no servidor TrueNAS SCALE (zvol dedicado) |
+| worker3 | Worker com GPU (AMD RX 9070) | Desktop físico dedicado |
 
 ### Organização dos diretórios
 
@@ -25,7 +26,7 @@ apps/                      Manifestos de aplicações rodando no cluster
   pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, config
   core-dns/                  CoreDNS - fallback de DNS que assume o IP do Pi-hole via Kube-VIP quando ele fica indisponível (ver "Gerenciamento de energia" abaixo)
   ntfy/                      ntfy self-hosted (push notifications) - deployment, service, PVC
-  gpu-test/                  Pod de teste usado para validar alocação de GPU (benchmark CUDA)
+  gpu-test/                  Pods de teste para validar alocação de GPU (benchmark CUDA na GTX 970, VA-API na RX 9070)
   grafana/alerts/            Export versionado de regras de alerta nativas do Grafana (backup, não aplicado automaticamente)
   helpers/                   Templates de pods temporários reutilizáveis (ex: migração de dados entre storage)
 
@@ -36,11 +37,13 @@ clusters/                  Configuração e estado dos nós do cluster
   media-stack/config.md      Stack de mídia (Jellyfin + *arr) - implantada; pontos em aberto rastreados em known-issues.md
   truenas/config.md          Estado completo do host TrueNAS: hardware, BIOS, pools e datasets ZFS
   worker2/config.md          Estado completo da VM worker2: hardware, SO, driver GPU, histórico de comandos
+  worker3/config.md          Estado completo do worker3 (desktop com RX 9070): hardware, BIOS, SO, GPU, histórico de comandos
 
 infrastructure/            Configuração de ferramentas de infraestrutura do cluster
   monitoring/                Values do kube-prometheus-stack (Prometheus, Grafana, Alertmanager)
   logging/                   Values do Loki + Grafana Alloy (agregação de logs)
   gpu-monitoring/            Values do dcgm-exporter + ConfigMap do dashboard (métricas de GPU)
+  amd-gpu/                   generic-device-plugin que expõe a RX 9070 do worker3 aos pods (devic.es/amdgpu)
   storage/                   Values dos provisioners NFS dinâmicos (TrueNAS SSD e HDD)
 
 troubleshooting/           Post-mortems de problemas reais já diagnosticados e resolvidos
@@ -74,7 +77,7 @@ ia/                        Contexto e ferramentas para agentes de IA trabalharem
 
 ### Gerenciamento de energia
 
-Os servidores worker (worker1, worker2) **e também o host TrueNAS** serão desligados durante a madrugada para economizar energia — o control-plane permanece ligado 24/7 (hospeda o Kube-VIP e a API do cluster). O Pi-hole tem anti-afinidade explícita com o control-plane (ver `apps/pihole/deployment.yaml`): como seu PVC é servido via NFS pelo TrueNAS, ele ficaria inutilizável de qualquer forma com o TrueNAS desligado, então não faz sentido deixá-lo rodar no control-plane só pra ficar travado esperando o storage voltar — ele simplesmente fica indisponível junto com os workers. Para a rede doméstica não perder resolução de DNS nesse período, o **coredns-bypass** (`apps/core-dns/`, namespace `dns-services`) roda permanentemente no control-plane como único listener de DNS no IP flutuante do Kube-VIP (`192.168.3.200`): ele encaminha as consultas pro Pi-hole (`ad-blocking` + registros `.home`) via um `Service` interno dedicado, com failover automático baseado em health-check (plugin `forward` do CoreDNS) pra Cloudflare sempre que o Pi-hole está indisponível — ver [troubleshooting/pihole_coredns_bypass_dns_round_robin_failover.md](troubleshooting/pihole_coredns_bypass_dns_round_robin_failover.md).
+Os servidores worker (worker1, worker2, worker3) **e também o host TrueNAS** serão desligados durante a madrugada para economizar energia — o control-plane permanece ligado 24/7 (hospeda o Kube-VIP e a API do cluster). O Pi-hole tem anti-afinidade explícita com o control-plane (ver `apps/pihole/deployment.yaml`): como seu PVC é servido via NFS pelo TrueNAS, ele ficaria inutilizável de qualquer forma com o TrueNAS desligado, então não faz sentido deixá-lo rodar no control-plane só pra ficar travado esperando o storage voltar — ele simplesmente fica indisponível junto com os workers. Para a rede doméstica não perder resolução de DNS nesse período, o **coredns-bypass** (`apps/core-dns/`, namespace `dns-services`) roda permanentemente no control-plane como único listener de DNS no IP flutuante do Kube-VIP (`192.168.3.200`): ele encaminha as consultas pro Pi-hole (`ad-blocking` + registros `.home`) via um `Service` interno dedicado, com failover automático baseado em health-check (plugin `forward` do CoreDNS) pra Cloudflare sempre que o Pi-hole está indisponível — ver [troubleshooting/pihole_coredns_bypass_dns_round_robin_failover.md](troubleshooting/pihole_coredns_bypass_dns_round_robin_failover.md).
 
 A automação do ciclo de desligar/religar os workers via **Ansible** ainda não existe — ver [ideias futuras: automação Ansible do ciclo de energia](ideas/ansible_power_cycle_automation.md).
 
@@ -94,9 +97,10 @@ It holds the manifests, infrastructure configuration, and state/diagnostic docum
 
 | Node | Role | Where it runs |
 |---|---|---|
-| control-plane | Control-plane (API, etcd), HA via Kube-VIP | Dedicated physical server |
+| control-plane | Control-plane (API, embedded etcd datastore), virtual IP via Kube-VIP | Dedicated physical server |
 | worker1 | Worker | Dedicated physical server |
 | worker2 | Worker with GPU (NVIDIA GTX 970) | VM on the TrueNAS SCALE server (dedicated zvol) |
+| worker3 | Worker with GPU (AMD RX 9070) | Dedicated physical desktop |
 
 ### Directory layout
 
@@ -105,7 +109,7 @@ apps/                      Application manifests running on the cluster
   pihole/                    Pi-hole (DNS/ad-blocking) - deployment, service, PVC, config
   core-dns/                  CoreDNS - DNS fallback that takes over Pi-hole's Kube-VIP IP when it's unavailable (see "Power management" below)
   ntfy/                      Self-hosted ntfy (push notifications) - deployment, service, PVC
-  gpu-test/                  Test pod used to validate GPU allocation (CUDA benchmark)
+  gpu-test/                  Test pods to validate GPU allocation (CUDA benchmark on the GTX 970, VA-API on the RX 9070)
   grafana/alerts/            Versioned export of native Grafana alert rules (backup, not auto-applied)
   helpers/                   Reusable temporary pod templates (e.g. data migration between storage backends)
 
@@ -116,11 +120,13 @@ clusters/                  Configuration and state of the cluster nodes
   media-stack/config.md      Media stack (Jellyfin + *arr) - deployed; open items tracked in known-issues.md
   truenas/config.md          Full state of the TrueNAS host: hardware, BIOS, ZFS pools and datasets
   worker2/config.md          Full state of the worker2 VM: hardware, OS, GPU driver, command history
+  worker3/config.md          Full state of worker3 (RX 9070 desktop): hardware, BIOS, OS, GPU, command history
 
 infrastructure/            Cluster infrastructure tooling configuration
   monitoring/                kube-prometheus-stack values (Prometheus, Grafana, Alertmanager)
   logging/                   Loki + Grafana Alloy values (log aggregation)
   gpu-monitoring/            dcgm-exporter values + dashboard ConfigMap (GPU metrics)
+  amd-gpu/                   generic-device-plugin exposing worker3's RX 9070 to pods (devic.es/amdgpu)
   storage/                   Dynamic NFS provisioner values (TrueNAS SSD and HDD)
 
 troubleshooting/           Post-mortems of real issues already diagnosed and resolved
@@ -154,7 +160,7 @@ ia/                        Context and tooling for AI agents working in this rep
 
 ### Power management
 
-The worker servers (worker1, worker2) **and the TrueNAS host** will be shut down overnight to save power — the control-plane stays on 24/7 (it hosts Kube-VIP and the cluster API). Pi-hole has explicit anti-affinity against the control-plane (see `apps/pihole/deployment.yaml`): since its PVC is served over NFS by TrueNAS, it would be unusable anyway once TrueNAS is off, so there's no point letting it run on the control-plane just to sit stuck waiting on storage that isn't there — it simply goes down along with the workers. To keep DNS resolution working for the home network during that window, **coredns-bypass** (`apps/core-dns/`, `dns-services` namespace) runs permanently on the control-plane as the sole DNS listener on the Kube-VIP floating IP (`192.168.3.200`): it forwards queries to Pi-hole (ad-blocking + `.home` records) through a dedicated internal `Service`, with automatic health-check-based failover (CoreDNS's `forward` plugin) to Cloudflare whenever Pi-hole is unavailable — see [troubleshooting/pihole_coredns_bypass_dns_round_robin_failover.md](troubleshooting/pihole_coredns_bypass_dns_round_robin_failover.md).
+The worker servers (worker1, worker2, worker3) **and the TrueNAS host** will be shut down overnight to save power — the control-plane stays on 24/7 (it hosts Kube-VIP and the cluster API). Pi-hole has explicit anti-affinity against the control-plane (see `apps/pihole/deployment.yaml`): since its PVC is served over NFS by TrueNAS, it would be unusable anyway once TrueNAS is off, so there's no point letting it run on the control-plane just to sit stuck waiting on storage that isn't there — it simply goes down along with the workers. To keep DNS resolution working for the home network during that window, **coredns-bypass** (`apps/core-dns/`, `dns-services` namespace) runs permanently on the control-plane as the sole DNS listener on the Kube-VIP floating IP (`192.168.3.200`): it forwards queries to Pi-hole (ad-blocking + `.home` records) through a dedicated internal `Service`, with automatic health-check-based failover (CoreDNS's `forward` plugin) to Cloudflare whenever Pi-hole is unavailable — see [troubleshooting/pihole_coredns_bypass_dns_round_robin_failover.md](troubleshooting/pihole_coredns_bypass_dns_round_robin_failover.md).
 
 Automating the worker shutdown/startup cycle via **Ansible** doesn't exist yet — see [future ideas: Ansible power cycle automation](ideas/ansible_power_cycle_automation.md).
 

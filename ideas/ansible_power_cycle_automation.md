@@ -23,7 +23,8 @@ Não é só desligar/ligar máquinas — precisa coordenar com o mecanismo de fa
 
 - O playbook dispara por horário fixo (cron) ou por algum outro gatilho?
 - Como verificar programaticamente que o failover de DNS completou antes de prosseguir com o desligamento?
-- Onde esse playbook roda (precisa estar em uma máquina que fica ligada 24/7, ex: o próprio control-plane)?
+- Onde esse playbook roda (precisa estar em uma máquina que fica ligada 24/7, ex: o próprio control-plane)? **Candidato (2026-11-19)**: uma Raspberry Pi 3 fora do cluster, que também dispararia o Wake-on-LAN e o desligamento por queda de energia — ver [raspberry_pi3_utility_node.md](raspberry_pi3_utility_node.md).
+- O ciclo passa a incluir o **worker3** (ver [worker3_gpu_node.md](worker3_gpu_node.md)), e o religamento pode ser feito via **Wake-on-LAN** em vez de manualmente.
 
 ---
 
@@ -46,4 +47,5 @@ It's not just turning machines off/on — it needs to coordinate with the existi
 
 - Does the playbook trigger on a fixed schedule (cron) or some other trigger?
 - How to programmatically verify DNS failover completed before proceeding with shutdown?
-- Where does this playbook run (needs to be on a machine that's on 24/7, e.g. the control-plane itself)?
+- Where does this playbook run (needs to be on a machine that's on 24/7, e.g. the control-plane itself)? **Candidate (2026-11-19)**: a Raspberry Pi 3 outside the cluster, which would also send Wake-on-LAN and trigger power-outage shutdowns — see [raspberry_pi3_utility_node.md](raspberry_pi3_utility_node.md).
+- The cycle now includes **worker3** (see [worker3_gpu_node.md](worker3_gpu_node.md)), and power-on can be done via **Wake-on-LAN** instead of manually.

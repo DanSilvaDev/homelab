@@ -12,8 +12,9 @@ O cluster já foi gerenciado via Rancher; removido em 2026-10-28 (observability 
 
 ```
 clusters/
-  control_plane_1/      -> nó control-plane (servidor físico separado)
+  control_plane_1/      -> nó control-plane (servidor físico separado); config.md com estado do k3s server, datastore etcd e snapshots
   worker2/config.md      -> estado atual completo da VM worker2 (hospedada no TrueNAS)
+  worker3/config.md      -> estado atual completo do worker3 (desktop físico com RX 9070)
   truenas/config.md      -> estado atual completo do host TrueNAS (hardware, BIOS, pools ZFS)
   observability/config.md -> estado da stack de monitoring/logging (Prometheus, Grafana, Alertmanager, storage NFS)
   kube-vip/               -> manifestos do Kube-VIP (HA do control-plane + LoadBalancer L2/ARP)
@@ -36,11 +37,12 @@ ia/
 
 | Nó | Papel | Localização |
 |---|---|---|
-| control-plane | Control-plane (API, etcd) | Servidor físico dedicado |
+| control-plane | Control-plane (API, datastore etcd embutido — migrado de SQLite em 2026-11-22; taint `NoSchedule`) | Servidor físico dedicado |
 | worker1 | Worker | Servidor físico dedicado |
-| worker2 | Worker (com GPU GTX 970 via passthrough) | VM no servidor TrueNAS SCALE |
+| worker2 | Worker (com GPU GTX 970 via passthrough; sem Jellyfin desde 2026-11-22) | VM no servidor TrueNAS SCALE |
+| worker3 | Worker (com GPU AMD RX 9070 via generic-device-plugin `devic.es/amdgpu`; roda o Jellyfin com VA-API desde 2026-11-22) | Desktop físico dedicado |
 
-Antes de propor mudanças de infraestrutura, **sempre leia primeiro** `clusters/worker2/config.md`, `clusters/truenas/config.md` e, se a mudança envolver monitoring/logging/storage NFS, `clusters/observability/config.md` — eles contêm o estado real e atualizado de hardware, storage ZFS, configuração da VM e do cluster, incluindo o log de comandos já executados.
+Antes de propor mudanças de infraestrutura, **sempre leia primeiro** `clusters/worker2/config.md`, `clusters/worker3/config.md`, `clusters/truenas/config.md` e, se a mudança envolver monitoring/logging/storage NFS, `clusters/observability/config.md` — eles contêm o estado real e atualizado de hardware, storage ZFS, configuração da VM e do cluster, incluindo o log de comandos já executados.
 
 ## Convenções importantes
 
@@ -54,7 +56,9 @@ Antes de propor mudanças de infraestrutura, **sempre leia primeiro** `clusters/
 
 ## Gerenciamento de energia (em andamento)
 
-Os workers (worker1, worker2) **e o host TrueNAS** serão desligados durante a madrugada para economizar energia. O control-plane permanece ligado 24/7 (hospeda Kube-VIP e a API do cluster) e passou a ser o único node onde o `coredns-bypass` (`apps/core-dns/`) pode rodar.
+Os workers (worker1, worker2, worker3) **e o host TrueNAS** serão desligados durante a madrugada para economizar energia. O control-plane permanece ligado 24/7 (hospeda Kube-VIP e a API do cluster) e passou a ser o único node onde o `coredns-bypass` (`apps/core-dns/`) pode rodar.
+
+Desde 2026-11-22 o control-plane tem o taint `node-role.kubernetes.io/control-plane:NoSchedule` (aplicado manualmente — o k3s **não** aplica esse taint por padrão, ao contrário do kubeadm; antes disso, workloads comuns iam parar nele, e a media stack rodou ~5 dias lá durante uma instabilidade do worker1). Só roda ali o que tem toleration explícita: Kube-VIP, `kube-vip-cloud-provider`, `coredns-bypass`, NFS provisioners, addons do k3s (coredns, metrics-server, local-path) e os DaemonSets de observabilidade (Alloy, loki-canary, node-exporter). Workload novo que precise rodar no control-plane precisa declarar a toleration.
 
 O Pi-hole, por sua vez, tem **anti-afinidade explícita** contra o control-plane (`apps/pihole/deployment.yaml`) — e essa restrição não é arbitrária: o PVC do Pi-hole é servido via NFS pelo TrueNAS (`truenas-nfs-ssd`), então com o TrueNAS desligado o storage dele fica inacessível de qualquer forma. Não faz sentido permitir que o pod suba no control-plane só pra ficar preso em `ContainerCreating`/`CrashLoopBackOff` esperando um storage que não vai responder; o esperado é que o Pi-hole simplesmente fique indisponível durante a madrugada, junto com os workers e o TrueNAS.
 
