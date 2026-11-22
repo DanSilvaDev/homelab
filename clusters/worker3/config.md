@@ -62,7 +62,7 @@ Adiados (medir consumo antes): PCIe ASPM (histórico de instabilidade de NIC no 
 
 | Nó | IP | Papel |
 |---|---|---|
-| control-plane (`kubecluster-lenovo-z40-70`) | `192.168.3.100` (VIP da API: `192.168.3.101`) | server (`control-plane,master`), datastore SQLite |
+| control-plane (`kubecluster-lenovo-z40-70`) | `192.168.3.100` (VIP da API: `192.168.3.101`) | server (`control-plane,etcd,master`), datastore etcd embutido (migrado de SQLite em 2026-11-22) |
 | worker1 | `192.168.3.102` | agent (`worker`) |
 | worker2 | `192.168.3.105` | agent (`worker`, GTX 970, label `gpu=true`) |
 | worker3 | `192.168.3.106` | agent (`worker`, RX 9070) — ingressou em 2026-11-22, apontando para o VIP `https://192.168.3.101:6443` |
@@ -83,7 +83,7 @@ Sem taint no worker3 por enquanto: aceita qualquer workload como um worker comum
 - [x] Pods DaemonSet no worker3 todos `Running` (`alloy`, `node-exporter`, `loki-canary`) e `k3s-agent` `active (running)` (2026-11-22)
 - [x] Wake-on-LAN: persistido no netplan, `Wake-on: g` confirmado após o reboot (e `k3s-agent` voltou sozinho); testado em 2026-11-22: `poweroff`, ~2 min, magic packet enviado do control-plane → node ligou e voltou a `Ready`
 - [x] Drop-in do SSH confirmado após a reinstalação (`sshd -T`: `passwordauthentication no`, `kbdinteractiveauthentication no`)
-- [ ] Migração SQLite → etcd no control-plane — ver [ideas/control_plane_sqlite_to_etcd_migration.md](../../ideas/control_plane_sqlite_to_etcd_migration.md)
+- [x] Migração SQLite → etcd no control-plane (2026-11-22) — ver [control_plane_1/config.md](../control_plane_1/config.md)
 - [x] Confirmar C-states (`cpuidle`: `POLL`, `C1`, `C2`)
 - [ ] Fase 2: GPU no k8s + migração do Jellyfin — ver [ideas/worker3_gpu_node.md](../../ideas/worker3_gpu_node.md)
 

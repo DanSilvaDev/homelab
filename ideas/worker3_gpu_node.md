@@ -6,7 +6,7 @@
 
 ## Português
 
-**Status**: Em implementação — fases 0 e 1 concluídas (worker3 no cluster como `agent` desde 2026-11-22; estado atual em [clusters/worker3/config.md](../clusters/worker3/config.md)). Próximo: migração SQLite → etcd ([control_plane_sqlite_to_etcd_migration.md](control_plane_sqlite_to_etcd_migration.md)), depois a fase 2.
+**Status**: Em implementação — fases 0 e 1 concluídas (worker3 no cluster como `agent` desde 2026-11-22; estado atual em [clusters/worker3/config.md](../clusters/worker3/config.md)). Migração SQLite → etcd do control-plane também concluída em 2026-11-22 ([control_plane_1/config.md](../clusters/control_plane_1/config.md)). Próximo: fase 2.
 **Componente(s) relacionado(s)**: worker3 (node novo), Jellyfin, Wolf/Moonlight (streaming de jogos), Ollama/Open WebUI (IA local), worker2 (GTX 970), observabilidade, ciclo de energia.
 **Origem**: sessão de planejamento de 2026-11-19 — o usuário montou uma máquina nova para entrar no cluster como `worker3`.
 
@@ -128,7 +128,7 @@ HA do control-plane fica fora deste plano — ver [multi_control_plane_ha.md](mu
 
 ## English
 
-**Status**: In progress — phases 0 and 1 done (worker3 in the cluster as an `agent` since 2026-11-22; current state in [clusters/worker3/config.md](../clusters/worker3/config.md)). Next: SQLite → etcd migration ([control_plane_sqlite_to_etcd_migration.md](control_plane_sqlite_to_etcd_migration.md)), then phase 2.
+**Status**: In progress — phases 0 and 1 done (worker3 in the cluster as an `agent` since 2026-11-22; current state in [clusters/worker3/config.md](../clusters/worker3/config.md)). The control-plane SQLite → etcd migration was also completed on 2026-11-22 ([control_plane_1/config.md](../clusters/control_plane_1/config.md)). Next: phase 2.
 **Related component(s)**: worker3 (new node), Jellyfin, Wolf/Moonlight (game streaming), Ollama/Open WebUI (local AI), worker2 (GTX 970), observability, power cycle.
 **Origin**: planning session on 2026-11-19 — the user built a new machine to join the cluster as `worker3`.
 

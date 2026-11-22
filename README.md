@@ -14,7 +14,7 @@ Guarda os manifestos, configurações de infraestrutura e a documentação de es
 
 | Nó | Papel | Onde roda |
 |---|---|---|
-| control-plane | Control-plane (API, datastore SQLite), com IP virtual via Kube-VIP | Servidor físico dedicado |
+| control-plane | Control-plane (API, datastore etcd embutido), com IP virtual via Kube-VIP | Servidor físico dedicado |
 | worker1 | Worker | Servidor físico dedicado |
 | worker2 | Worker com GPU (NVIDIA GTX 970) | VM no servidor TrueNAS SCALE (zvol dedicado) |
 | worker3 | Worker com GPU (AMD RX 9070) | Desktop físico dedicado |
@@ -96,7 +96,7 @@ It holds the manifests, infrastructure configuration, and state/diagnostic docum
 
 | Node | Role | Where it runs |
 |---|---|---|
-| control-plane | Control-plane (API, SQLite datastore), virtual IP via Kube-VIP | Dedicated physical server |
+| control-plane | Control-plane (API, embedded etcd datastore), virtual IP via Kube-VIP | Dedicated physical server |
 | worker1 | Worker | Dedicated physical server |
 | worker2 | Worker with GPU (NVIDIA GTX 970) | VM on the TrueNAS SCALE server (dedicated zvol) |
 | worker3 | Worker with GPU (AMD RX 9070) | Dedicated physical desktop |

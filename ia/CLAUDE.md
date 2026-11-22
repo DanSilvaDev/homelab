@@ -12,7 +12,7 @@ O cluster já foi gerenciado via Rancher; removido em 2026-10-28 (observability 
 
 ```
 clusters/
-  control_plane_1/      -> nó control-plane (servidor físico separado)
+  control_plane_1/      -> nó control-plane (servidor físico separado); config.md com estado do k3s server, datastore etcd e snapshots
   worker2/config.md      -> estado atual completo da VM worker2 (hospedada no TrueNAS)
   worker3/config.md      -> estado atual completo do worker3 (desktop físico com RX 9070)
   truenas/config.md      -> estado atual completo do host TrueNAS (hardware, BIOS, pools ZFS)
@@ -37,7 +37,7 @@ ia/
 
 | Nó | Papel | Localização |
 |---|---|---|
-| control-plane | Control-plane (API, datastore SQLite — não etcd, confirmado em 2026-11-21) | Servidor físico dedicado |
+| control-plane | Control-plane (API, datastore etcd embutido — migrado de SQLite em 2026-11-22; taint `NoSchedule`) | Servidor físico dedicado |
 | worker1 | Worker | Servidor físico dedicado |
 | worker2 | Worker (com GPU GTX 970 via passthrough) | VM no servidor TrueNAS SCALE |
 | worker3 | Worker (com GPU AMD RX 9070; no cluster desde 2026-11-22, ainda sem workloads de GPU) | Desktop físico dedicado |
