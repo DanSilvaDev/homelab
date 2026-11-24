@@ -12,6 +12,7 @@ Quando um problema daqui for resolvido: escreva o post-mortem em `troubleshootin
 
 | Problema | Componente | Tags | Data | Link |
 |---|---|---|---|---|
+| SSD do sistema do worker1 não é reconhecido pela placa-mãe após reboot (SMART limpo dias antes); node fora do ar | worker1 (hardware) | Hardware, Storage, Node | 2026-11-24 | [worker1_system_ssd_not_detected_by_bios.md](known-issues/worker1_system_ssd_not_detected_by_bios.md) |
 | 🔵 CronJob do Recyclarr trava e dispara `KubeJobNotCompleted` (branch `v8` inexistente, loop de retry infinito) | Recyclarr, CronJob, Alertmanager | Media Stack, CronJob, Alertmanager | 2026-11-08 | [recyclarr_cronjob_hangs_kubejobnotcompleted.md](known-issues/recyclarr_cronjob_hangs_kubejobnotcompleted.md) |
 | qBittorrent trava com frequência em "Downloading metadata" | qBittorrent, Gluetun | Media Stack, VPN, Network | 2026-11-08 | [qbittorrent_stuck_downloading_metadata.md](known-issues/qbittorrent_stuck_downloading_metadata.md) |
 
@@ -25,5 +26,6 @@ When a problem here gets resolved: write the post-mortem in `troubleshooting/` (
 
 | Problem | Component | Tags | Date | Link |
 |---|---|---|---|---|
+| worker1 system SSD not detected by the motherboard after a reboot (clean SMART days earlier); node down | worker1 (hardware) | Hardware, Storage, Node | 2026-11-24 | [worker1_system_ssd_not_detected_by_bios.md](known-issues/worker1_system_ssd_not_detected_by_bios.md) |
 | 🔵 Recyclarr CronJob hangs and fires `KubeJobNotCompleted` (nonexistent `v8` branch, infinite retry loop) | Recyclarr, CronJob, Alertmanager | Media Stack, CronJob, Alertmanager | 2026-11-08 | [recyclarr_cronjob_hangs_kubejobnotcompleted.md](known-issues/recyclarr_cronjob_hangs_kubejobnotcompleted.md) |
 | qBittorrent frequently gets stuck on "Downloading metadata" | qBittorrent, Gluetun | Media Stack, VPN, Network | 2026-11-08 | [qbittorrent_stuck_downloading_metadata.md](known-issues/qbittorrent_stuck_downloading_metadata.md) |

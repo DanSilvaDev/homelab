@@ -7,6 +7,8 @@
 ## Português
 
 > ⚠️ **Status: Workaround aplicado, sobrevive a reboot — efetividade de longo prazo ainda não confirmada.** A causa exata do bug no driver/firmware não é conhecida (é um problema upstream de longa data, sem fix oficial), mas um workaround comunitário específico pra esse chip foi aplicado com sucesso técnico (persiste após reboot). Falta confirmar, ao longo do tempo, se a frequência de oscilação realmente diminuiu.
+>
+> **Atualização 2026-11-24**: o plano B foi colocado em prática — adaptador USB 3.0 RTL8153 (`enx00e04c1a7e38`) com IP fixo `192.168.3.102` no netplan (o roteador ignorou a reserva DHCP para o MAC novo). Funcionou ao aplicar, mas a validação após reboot ficou pendente: no reboot seguinte o SSD do worker1 deixou de ser reconhecido — ver [known-issues/worker1_system_ssd_not_detected_by_bios.md](../known-issues/worker1_system_ssd_not_detected_by_bios.md).
 
 A placa de rede onboard do `worker1` (`eno1`, chip Broadcom `tg3`/BCM5762, já identificado em [`troubleshooting/worker1_eno1_nic_link_down.md`](worker1_eno1_nic_link_down.md)) passou a oscilar com frequência maior que a de um incidente isolado, levantando a suspeita de necessidade de substituição de hardware. Pesquisa identificou um bug conhecido, de longa data, específico desse chip em hardware HP EliteDesk — com um workaround comunitário (`ethtool -K highdma off`) aplicado via regra `udev`.
 
@@ -98,6 +100,8 @@ A regra confirmadamente sobrevive a um reboot completo. **Ainda não confirmado*
 ## English
 
 > ⚠️ **Status: Workaround applied, survives reboot — long-term effectiveness not yet confirmed.** The exact root cause of the driver/firmware bug is unknown (it's a long-standing upstream issue with no official fix), but a community workaround specific to this chip was applied with technical success (it persists after a reboot). Whether the oscillation frequency actually decreased still needs to be confirmed over time.
+>
+> **Update 2026-11-24**: plan B was put into practice — a USB 3.0 RTL8153 adapter (`enx00e04c1a7e38`) with a static IP `192.168.3.102` in netplan (the router ignored the DHCP reservation for the new MAC). It worked when applied, but validation after a reboot is still pending: on the next reboot worker1's SSD stopped being detected — see [known-issues/worker1_system_ssd_not_detected_by_bios.md](../known-issues/worker1_system_ssd_not_detected_by_bios.md).
 
 The onboard NIC on `worker1` (`eno1`, Broadcom `tg3`/BCM5762 chip, already identified in [`troubleshooting/worker1_eno1_nic_link_down.md`](worker1_eno1_nic_link_down.md)) started flaking out more often than a single isolated incident, raising suspicion that the card might need physical replacement. Research identified a known, long-standing bug specific to this chip on HP EliteDesk hardware — with a community workaround (`ethtool -K highdma off`) applied via a `udev` rule.
 
